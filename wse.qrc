@@ -1,0 +1,19 @@
+<RCC>
+    <qresource prefix="/WSE">
+        <file>Resources/visualize.png</file>
+        <file>Resources/add.png</file>
+        <file>Resources/remove.png</file>
+        <file>Resources/cluster.png</file>
+        <file>Resources/import.png</file>
+        <file>Resources/prefilter.png</file>
+        <file>Resources/export.png</file>
+        <file>Resources/select.png</file>
+        <file>Resources/unselect.png</file>
+        <file>Resources/mask.png</file>
+        <file>Resources/DataVolume.png</file>
+        <file>Resources/bars.png</file>
+        <file>Resources/lines.png</file>
+        <file>Resources/iso.png</file>
+        <file>Resources/splash2.png</file>
+    </qresource>
+</RCC>

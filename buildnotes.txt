@@ -1,0 +1,11 @@
+Needs Qt 4, VTK, ITK
+
+VTK needs to be built with GUI support and the QVTKWidget  (Two options in the
+Advanced CMake menu.  First configure the GUI support, then QT support.)
+
+Builds easiest with VTK 5.4.2.  Building with VTK versions greater than 5.4.2
+needed to configure VTK build without objective c garbage collection.
+
+
+
+
