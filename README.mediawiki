@@ -1,0 +1,10 @@
+== What is this? ==
+The Watershed Editor tool is a standalone application for volume segmentation using the ITK watershed transform filter (itkWatershedSegmenter, etc).  This is an updated Qt version of the InsightApplications WatershedEditor example app.
+
+Dependencies are Qt 4, VTK, ITK and possibly QWT.  Builds with CMake.
+
+== Status ==
+Very much a work in progress. Estimated alpha version by late Summer 2011. 
+
+== Relationship to Slicer 4 ==
+This project is a side-effect of work on a Slicer 4 watershed segmentation module, which will reuse parts of this Qt interface and all of the underlying processing logic.
