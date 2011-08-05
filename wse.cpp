@@ -53,6 +53,8 @@
 #include "qwt_scale_widget.h"
 #include "qwt_scale_engine.h"
 
+#include "QThreadITKFilter.hxx"
+#include "itkDiscreteGaussianImageFilter.h"
 //#include "IsoRenderer.h"
 
 namespace wse {
@@ -110,7 +112,6 @@ wseGUI::wseGUI(QWidget *parent, Qt::WFlags flags) :
   mMinHistogramBins(10),
   mMaxHistogramBins(1000),
   mHistogram(NULL),
-  mExportDirty(true),
   mSmoothStepThreshold(false),
   mScaleWidget(QwtScaleDraw::BottomScale, this), mCurrentColorMap(0)
 {
@@ -214,39 +215,43 @@ void wseGUI::setupUI()
   ui.vtkRenderWidget->GetInteractor()->SetPicker(mPointPicker);
 
   // Toolbar
-  mImportAction = new QAction(QIcon(":/WSE/Resources/import.png"), tr("&Import"), this);
-  mImportAction->setToolTip(tr("Import"));
-  mImportAction->setStatusTip(tr("Import registered images"));
+  mImportAction = new QAction(QIcon(":/WSE/Resources/import.png"), tr("&Load Volume"), this);
+  mImportAction->setToolTip(tr("Load an image volume"));
+  mImportAction->setStatusTip(tr("Load an image volume"));
   mImportAction->setCheckable(true);
   connect(mImportAction, SIGNAL(triggered()), this, SLOT(on_addButton_released()));
   
-  mExportAction = new QAction(QIcon(":/WSE/Resources/export.png"), tr("&Export"), this);
-  mExportAction->setToolTip(tr("Export"));
-  mExportAction->setStatusTip(tr("Export model"));
-  mExportAction->setCheckable(true);
+  // mExportAction = new QAction(QIcon(":/WSE/Resources/export.png"), tr("&Export"), this);
+  // mExportAction->setToolTip(tr("Export"));
+  // mExportAction->setStatusTip(tr("Export model"));
+  // mExportAction->setCheckable(true);
 
   QActionGroup *toolBarGroup = new QActionGroup(this);
   toolBarGroup->addAction(mImportAction);
-  toolBarGroup->addAction(mExportAction);
-  mImportAction->setChecked(true);
-  mExportAction->setEnabled(false);
+  // toolBarGroup->addAction(mExportAction);
+  mImportAction->setChecked(false);
+  // mExportAction->setEnabled(false);
 
   // ui.mainToolBar->addAction(mImportAction);
   // ui.mainToolBar->addAction(mExportAction);
-  // ui.mainToolBar->setIconSize(QSize(30,30));
 
+  ui.mainToolBar->addAction(mImportAction);
+  ui.mainToolBar->setIconSize(QSize(30,30));
+  ui.mainToolBar->show();
+  ui.mainToolBar->setEnabled(true);
+  
   // Menubar
-  mImportImageAction = new QAction(tr("Import Image"), this);
-  mImportImageAction->setShortcut(tr("Import images from file"));
-  mExportColormapAction = new QAction(tr("Export Colormap"), this);
-  mExportColormapAction->setShortcut(tr("Export selected colormaps"));
-  mExportColormapAction->setEnabled(false);
+  mImportImageAction = new QAction(tr("Load Volume"), this);
+  mImportImageAction->setShortcut(tr("Load image volumes from file"));
+  //  mExportColormapAction = new QAction(tr("Export Colormap"), this);
+  //  mExportColormapAction->setShortcut(tr("Export selected colormaps"));
+  //mExportColormapAction->setEnabled(false);
   QAction *exitAction = new QAction(tr("E&xit"), this);
   exitAction->setShortcut(tr("Ctrl+Q"));
   exitAction->setStatusTip(tr("Exit the application"));
 
   connect(mImportImageAction, SIGNAL(triggered()),this,SLOT(on_addButton_released()));
-  connect(mExportColormapAction, SIGNAL(triggered()), this, SLOT(exportImage()));
+  //  connect(mExportColormapAction, SIGNAL(triggered()), this, SLOT(exportImage()));
   connect(exitAction, SIGNAL(triggered()), qApp, SLOT(closeAllWindows()));
 
   mFullScreenAction = new QAction(tr("&Full Screen"), this);
@@ -271,34 +276,40 @@ void wseGUI::setupUI()
   mIsoSurfaceView->setShortcut((tr("Ctrl+4")));
   connect(mIsoSurfaceView, SIGNAL(triggered()), this, SLOT(setIsoSurfaceView()));
 
-  mToggleThresholdAction = new QAction(tr("Toggle Threshold Display"), this);
-  mToggleThresholdAction->setShortcut(Qt::Key_Space);
-  mToggleThresholdAction->setCheckable(true);
-  connect(mToggleThresholdAction, SIGNAL(triggered()), this, SLOT(toggleThresholdDisplay()));
+  // mToggleThresholdAction = new QAction(tr("Toggle Threshold Display"), this);
+  // mToggleThresholdAction->setShortcut(Qt::Key_Space);
+  // mToggleThresholdAction->setCheckable(true);
+  // connect(mToggleThresholdAction, SIGNAL(triggered()), this, SLOT(toggleThresholdDisplay()));
 
-  mTogglePercentageShownAction = new QAction(tr("Toggle Percentage Display"), this);
-  mTogglePercentageShownAction->setShortcut(tr("Ctrl+S"));
-  mTogglePercentageShownAction->setCheckable(true);
-  connect(mTogglePercentageShownAction, SIGNAL(triggered()), this, SLOT(togglePercentageShown()));
+  // mTogglePercentageShownAction = new QAction(tr("Toggle Percentage Display"), this);
+  // mTogglePercentageShownAction->setShortcut(tr("Ctrl+S"));
+  // mTogglePercentageShownAction->setCheckable(true);
+  // connect(mTogglePercentageShownAction, SIGNAL(triggered()), this, SLOT(togglePercentageShown()));
+
+
+  QAction *prefAction = new QAction(tr("&Preferences..."),this);
+  prefAction->setStatusTip(tr("Set program preferences"));
+  //  connect(prefAction,SIGNAL(triggered()), mPreferencesWindow,SLOT(exec()));  
 
   QMenu *fileMenu = ui.menuBar->addMenu(tr("&File"));
   fileMenu->addAction(mImportImageAction);
-  fileMenu->addAction(mExportColormapAction);
+  fileMenu->addAction(prefAction);
   fileMenu->addAction(exitAction);
-  
+
   // QMenu *toolsMenu = ui.menuBar->addMenu(tr("&Tools"));
   // toolsMenu->addAction(mImportAction);
   // toolsMenu->addAction(mExportAction);
 
-  mViewDataWindowAction = new QAction(tr("View Data Window"), this);
-  connect(mViewDataWindowAction, SIGNAL(triggered()), ui.dataDockWidget, SLOT(show()));
-
+  // View menu
   mViewControlWindowAction = new QAction(tr("View Control Window"), this);
   connect(mViewControlWindowAction, SIGNAL(triggered()), ui.controlsDockWidget, SLOT(show()));
 
   mViewWatershedWindowAction = new QAction(tr("View Watershed Window"), this);
   connect(mViewWatershedWindowAction, SIGNAL(triggered()), ui.watershedDockWidget, SLOT(show()));
 
+  mViewDataWindowAction = new QAction(tr("View Data Window"), this);
+  connect(mViewDataWindowAction, SIGNAL(triggered()), ui.dataDockWidget, SLOT(show()));
+  
   QMenu *viewMenu = ui.menuBar->addMenu(tr("&View"));
   viewMenu->setTearOffEnabled(true);
   viewMenu->setSeparatorsCollapsible(true);
@@ -307,8 +318,8 @@ void wseGUI::setupUI()
   viewMenu->addAction(mDualView);
   viewMenu->addAction(mSliceView);
   viewMenu->addAction(mIsoSurfaceView);
-  viewMenu->addAction(mToggleThresholdAction);
-  viewMenu->addAction(mTogglePercentageShownAction);
+  //  viewMenu->addAction(mToggleThresholdAction);
+  // viewMenu->addAction(mTogglePercentageShownAction);
   viewMenu->addSeparator();
   viewMenu->addAction(mViewDataWindowAction);
   viewMenu->addAction(mViewWatershedWindowAction);
@@ -356,7 +367,7 @@ void wseGUI::setupUI()
   connect(ui.sliceSelector,SIGNAL(valueChanged(int)), this, SLOT(viewerChangeSlice()));
   ui.sliceSelector->setTracking(true);
 
-  connect(ui.imageListWidget, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(setImageData()));
+  connect(ui.imageListWidget, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(on_setImageDataButton_released()));
   
   ui.sliceSelector->setEnabled(false);
   
@@ -378,11 +389,8 @@ void wseGUI::setupUI()
   
   // Connect the processing buttons
   connect(ui.setIsosurfaceButton, SIGNAL(released()), this, SLOT(setIsosurface()));
-
   connect(ui.setImageMaskButton,  SIGNAL(released()), this, SLOT(setImageMask()));
-  
-
-
+ 
 
   ui.setIsosurfaceButton->setEnabled(false);
   ui.setImageDataButton->setEnabled(false);
@@ -431,7 +439,7 @@ void wseGUI::setupUI()
   // for (unsigned int i = 0; i < scalarMethods.size(); ++i) {
   //   ui.scalarMethodComboBox->addItem(QString(scalarMethods[i].name.c_str()));
   // }
-  connect(ui.scalarMethodComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(scalarMethodChanged(int)));
+  //  connect(ui.scalarMethodComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(scalarMethodChanged(int)));
 
   for (unsigned int i = 0; i < mColorMaps.size(); ++i) {
     ui.colorMapComboBox->addItem(QString(mColorMaps[i].name.c_str()));
@@ -467,7 +475,6 @@ void wseGUI::setupUI()
   //ui.scalarMethodComboBox->setCurrentIndex(scalarMethods.size()-1);
   //ui.imageInterpolationComboBox->setCurrentIndex(1);
   //ui.maskInterpolationComboBox->setCurrentIndex(1);
-  //ui.smoothThresholdCheckBox->setChecked(true);
   //ui.subdivideMeshCheckBox->setChecked(true);
 
   ui.smoothGroupBox->setChecked(false);
@@ -476,7 +483,6 @@ void wseGUI::setupUI()
   ui.scalarMethodComboBox->setCurrentIndex(1);
   ui.imageInterpolationComboBox->setCurrentIndex(1);
   ui.maskInterpolationComboBox->setCurrentIndex(1);
-  ui.smoothThresholdCheckBox->setChecked(false);
   ui.subdivideMeshCheckBox->setChecked(true);
 
   this->setupWatershedWindowUI();
@@ -549,9 +555,8 @@ void wseGUI::on_setImageDataButton_released()
 {
   mImageData = ui.imageListWidget->currentRow();
   //  ui.setImageDataButton->setEnabled(false);
-  ui.setImageMaskButton->setEnabled(true);
+  //  ui.setImageMaskButton->setEnabled(true);
   ui.sliceSelector->setEnabled(true);
-
   this->updateImageListIcons();
   this->updateImageDisplay();
   this->setSliceView();
@@ -753,19 +758,20 @@ void wseGUI::viewerChangeSlice()
 
 void wseGUI::updateImageDisplay() {
 
-  if (mImageData != -1) {
-    mSliceViewer->SetImageMask(NULL);
-
-    Image *image = mImageStack->image(mImageData);
-    vtkImageImport *imageImport = image->originalVTK();
-    mSliceViewer->SetInputConnection(imageImport->GetOutputPort());
-
-    // Add the mask as an overlay to the image view window
-    if (mImageMask != -1) {
-      mSliceViewer->SetImageMask(mImageStack->image(mImageMask)->originalVTK()->GetOutputPort());
-    }
-
-    mSliceViewer->Render();
+  if (mImageData != -1) 
+    {
+      mSliceViewer->SetImageMask(NULL);
+      
+      Image *image = mImageStack->image(mImageData);
+      vtkImageImport *imageImport = image->originalVTK();
+      mSliceViewer->SetInputConnection(imageImport->GetOutputPort());
+      
+      // Add the mask as an overlay to the image view window
+      if (mImageMask != -1) {
+	mSliceViewer->SetImageMask(mImageStack->image(mImageMask)->originalVTK()->GetOutputPort());
+      }
+      
+      mSliceViewer->Render();
 
     // Set up the image slider
     ui.sliceSelector->setMinimum(0);
@@ -818,56 +824,66 @@ void wseGUI::on_addButton_released()
   for (int i = 0; i < files.size(); i++)
   {
     QString imagePath = files.at(i);
-    if (!addImageFromFile(imagePath))
-      break;
+    if ( ! addImageFromFile(imagePath) ) { break; }
   }
+
+  // Switch view to the last image loaded
+  this->on_setImageDataButton_released();
 }
 
 void wseGUI::importDelete()
 {
+
   QList<QListWidgetItem *> items = ui.imageListWidget->selectedItems();
+
   for (int i = items.size()-1; i >=0; i--)
-  {
-    QListWidgetItem *item = items.at(i);
-    int row = ui.imageListWidget->row(item);
-    QString name = item->text();
-    if (mImageStack->removeImage(name))
     {
-      ui.imageListWidget->takeItem(row);
-      delete item;
-    }
-    if (row == mImageData) {
-      mImageData = -1;
-      ui.sliceSelector->setEnabled(false);
-      updateImageDisplay();
-    } else if (row == mImageMask) {
-      mImageMask = -1;
-    } else if (row == mIsosurfaceImage) {
-      mIsosurfaceImage = -1;
-    }
+      QListWidgetItem *item = items.at(i);
+      int row = ui.imageListWidget->row(item);
+      QString name = item->text();
+      if (mImageStack->removeImage(name))
+	{
+	  ui.imageListWidget->takeItem(row);
+	  delete item;
+	}
 
-    if (mImageData > row) {
-      mImageData--;
-    }
-    if (mImageMask > row) {
-      mImageMask--;
-    }
-    if (mIsosurfaceImage > row) {
-      mIsosurfaceImage--;
-    }
 
-  }
-
+      if (row == mImageData) 
+	{
+	  mImageData = -1;
+	  ui.sliceSelector->setEnabled(false);
+	  updateImageDisplay();
+	} 
+      else if (row == mImageMask) 
+	{
+	  mImageMask = -1;
+	} 
+      else if (row == mIsosurfaceImage) 
+	{
+	  mIsosurfaceImage = -1;
+	}
+      
+      if (mImageData > row) 
+	{
+	  mImageData--;
+	}
+      if (mImageMask > row) 
+	{
+	  mImageMask--;
+	}
+      if (mIsosurfaceImage > row) 
+	{
+	  mIsosurfaceImage--;
+	}     
+    }
+  
   if (mImageStack->numImages() == 0)
-  {
-    mExportAction->setEnabled(false);
-  }
-
+    {
+      //    mExportAction->setEnabled(false);
+    }
   updateImageDisplay();
-
+  
   this->populateImageDataComboBoxes();
-
-  mExportDirty = true;   
 }
 
 
@@ -875,6 +891,34 @@ void wseGUI::imageDropped(QString fname)
 {
   addImageFromFile(fname);
 }
+
+bool wseGUI::addImageFromData(Image *img)
+{
+  if (mImageStack->addImage(img))
+  {
+    QListWidgetItem *item = new QListWidgetItem;
+
+    item->setText(mImageStack->selectedName());
+    ui.imageListWidget->insertItem(ui.imageListWidget->count(), item);
+    ui.imageListWidget->setCurrentRow(ui.imageListWidget->count()-1);
+    ui.setIsosurfaceButton->setEnabled(true);
+    //    ui.setImageMaskButton->setEnabled(true);
+    ui.setImageDataButton->setEnabled(true);
+    //    mExportAction->setEnabled(true);
+  }
+  else
+  {
+    int ret = QMessageBox::warning(this, tr("WSE"),
+                                   tr("There was an error adding image from data."),
+                                   QMessageBox::Ok);
+    return ret;
+    
+  }
+  this->populateImageDataComboBoxes();
+
+  return true;
+}
+
 
 bool wseGUI::addImageFromFile(QString fname)
 {
@@ -888,7 +932,7 @@ bool wseGUI::addImageFromFile(QString fname)
     ui.setIsosurfaceButton->setEnabled(true);
     //    ui.setImageMaskButton->setEnabled(true);
     ui.setImageDataButton->setEnabled(true);
-    mExportAction->setEnabled(true);
+    //    mExportAction->setEnabled(true);
   }
   else
   {
@@ -905,7 +949,6 @@ bool wseGUI::addImageFromFile(QString fname)
   
   this->populateImageDataComboBoxes();
 
-  mExportDirty = true;
   return true;
 }
 
@@ -994,15 +1037,6 @@ void wseGUI::colorSchemeSelectorChanged(int val)
 
   //redrawIsoSurface();
 }
-
-void wseGUI::scalarMethodChanged(int m) {
-  // mScalarMethod = m;
-  //  mIsoRenderer->setScalarMethod(ScalarMethod::getScalarMethods()[m]);
-  // mIsoRenderer->updateIsoScalars();
-  //  redrawIsoSurface();
-  // updateColorMap();
-}
-
 
 void wseGUI::visMethodChanged(int val)
 {
@@ -1476,34 +1510,7 @@ void wseGUI::showStatusMessage( const QString &text, int timeout /*= 0*/ ) {
   ui.statusBar->showMessage(text, timeout);
 }
 
-void wseGUI::on_smoothThresholdCheckBox_stateChanged(int value) {
-  mSmoothStepThreshold = value == Qt::Checked;
-  // mIsoRenderer->setSmoothThreshold(mSmoothStepThreshold);
-  on_smoothThresholdSlider_valueChanged(ui.smoothThresholdSlider->value());
-  mThresholdTimer.stop();
-  mThresholdTimer.start(100);
-}
 
-
-void wseGUI::on_smoothThresholdSlider_valueChanged(int value) {
-
-  // determine the ratio (0..1) of the slider 
-  float ratio = value / 100.0f;
-
-  // exponential
-  float input = ratio * 1.3f;
-  mSmoothThresholdWidth = input * input * input * input * input;
-
-  // mIsoRenderer->setSmoothThreshold(mSmoothStepThreshold);
-  // mIsoRenderer->setSmoothThresholdWidth(mSmoothThresholdWidth);
-  //std::cerr << "Width = " << mSmoothThresholdWidth << "\n";
-
-  // use a timer so that the ui has a more interactive response time
-  if (mSmoothStepThreshold) {  // only if enabled  
-    mThresholdTimer.stop();
-    mThresholdTimer.start(100);
-  }
-}
 
 void wseGUI::colorMapChanged( int m ) {
   mCurrentColorMap = m;
@@ -1892,6 +1899,50 @@ void wseGUI::on_curvatureRadioButton_toggled(bool on)
     {
       // Hide the anisotropic controls
       ui.anisotropicDiffusionParamsBox->hide();
+    }
+}
+
+
+void wseGUI::on_executeDenoisingButton_accepted()
+{
+  // No image data selected.
+  // TODO: add message box to this effect
+  if (mImageData == -1) return;
+
+  if (ui.gaussianRadioButton->isChecked())
+    {
+      //      itk::QThreadITKFilter<itk::DiscreteGaussianImageFilter<itkFloatImage,itkFloatImage> >::Pointer filter 
+      //	= itk::QThreadITKFilter<itk::DiscreteGaussianImageFilter<itkFloatImage,itkFloatImage> >::New();
+ 
+      itk::DiscreteGaussianImageFilter<itkFloatImage,itkFloatImage>::Pointer filter
+	=  itk::DiscreteGaussianImageFilter<itkFloatImage,itkFloatImage>::New();
+      filter->SetInput(mImageStack->image(mImageData)->original());
+      filter->SetVariance(ui.smoothingSigmaInputBox->value());
+      filter->SetUseImageSpacingOff();
+
+      filter->UpdateLargestPossibleRegion();
+
+
+      //      filter->start();
+
+      // TODO: unique image names?
+      Image *img = new Image(filter->GetOutput());
+      img->name(QString("DiscreteGaussianImageFilter+")+mImageStack->image(mImageData)->name());
+
+
+      this->addImageFromData(img);
+      //mImageStack->addImage( new Image(filter->GetOutput()) );
+      
+
+      // std::cout << "GAUSSIAN" << std::endl;
+    }
+  else if (ui.anisotropicRadioButton->isChecked())
+    {
+      // std::cout << "ANISOTROPIC" << std::endl;
+    }
+  else if (ui.curvatureRadioButton->isChecked())
+    {
+      // std::cout << "CURVATURE" << std::endl;
     }
 }
 

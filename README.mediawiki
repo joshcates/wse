@@ -3,6 +3,8 @@ The Watershed Editor tool is a standalone application for volume segmentation us
 
 Dependencies are Qt 4, VTK, ITK and possibly QWT.  Builds with CMake.
 
+See, for example, J. Cates, R. Whitaker, G. Jones, Case Study: An Evaluation of User-Assisted Hierarchical Watershed Segmentation, Medical Image Analysis, V.9, No.6, Dec. 2005 
+
 == Status ==
 Very much a work in progress. Estimated alpha version by late Summer 2011. 
 

@@ -15,6 +15,13 @@ public:
 
   // Images
   int numImages() { return mImages.size(); }
+  bool addImage(Image *img) 
+  {
+    mImages.push_back(img); 
+    mSelectedImage = mImages.size()-1;
+    return true;
+  }
+
   bool addImage(QString fname);
   bool removeImage(QString fname);
   Image *image(unsigned int i);
@@ -32,7 +39,6 @@ public:
   const vtkImageImport *selectedImageVTK(bool original) const;
 
   // Processing
-  //  void bilateralFilter(int kernel, double colorSigma, double spaceSigma);
   void resetFilters();
 
 signals:

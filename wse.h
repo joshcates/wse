@@ -37,10 +37,13 @@
 #include "histogram.h"
 #include "imageStack.h"
 #include "SliceViewer.h"
-//#include "scalarMethod.h"
 
 #include "qwt_color_map.h"
 #include "qwt_scale_widget.h"
+
+
+// ITK includes
+#include "itkImage.h"
 
 //#include "IsoRenderer.h"
 
@@ -94,6 +97,7 @@ class wseGUI : public QMainWindow
   Q_OBJECT
   
 public:
+  typedef Image::itkFloatImage itkFloatImage;
   wseGUI(QWidget *parent = 0, Qt::WFlags flags = 0);
   ~wseGUI();
   
@@ -102,6 +106,7 @@ public:
   
   void updateImageDisplay();
   bool addImageFromFile(QString fname);
+  bool addImageFromData(Image *img);
 
   static QSettings *g_settings;
 
@@ -124,7 +129,6 @@ public slots:
   void visSelectionChanged(QListWidgetItem *item);
   void visMethodChanged(int m);
   void colorSchemeSelectorChanged(int m);
-  void scalarMethodChanged(int m);
   void viewerChangeSlice();
   void updateHistogram();
   void updateImageListIcons();
@@ -188,16 +192,16 @@ private:
 
   /** Actions triggered from the main interface */
   QAction *mImportAction;
-  QAction *mExportAction;
+  //  QAction *mExportAction;
   QAction *mImportImageAction;
-  QAction *mExportColormapAction;
+  //  QAction *mExportColormapAction;
   QAction *mFullScreenAction;
   QAction *mNormalView;
   QAction *mDualView;
   QAction *mSliceView;
   QAction *mIsoSurfaceView;
-  QAction *mToggleThresholdAction;
-  QAction *mTogglePercentageShownAction;
+  //  QAction *mToggleThresholdAction;
+  // QAction *mTogglePercentageShownAction;
   QAction *mViewControlWindowAction;
   QAction *mViewDataWindowAction;
   QAction *mViewWatershedWindowAction;
@@ -218,8 +222,6 @@ private:
   /** The class that computes and stores a histogram from an ITK image */
   Histogram<Image::itkFloatImage> *mHistogram;
 
-  /** NOT USED */
-  bool mExportDirty;
   bool mSmoothStepThreshold;
   QwtScaleWidget mScaleWidget;
   int mCurrentColorMap;
@@ -248,11 +250,9 @@ private:
   InteractorCallback *mVTKCallback;
   vtkPointPicker *mPointPicker;
 
-  int mScalarMethod;
   bool mPercentageShown;
   bool mFullScreen;
 
-  float mSmoothThresholdWidth;
 
   std::vector<int> mPoints;
   std::vector<float> mMarkers;
@@ -270,7 +270,7 @@ private slots:
   void on_gaussianRadioButton_toggled(bool);
   void on_anisotropicRadioButton_toggled(bool);
   void on_curvatureRadioButton_toggled(bool);
-  void on_executeDenoisingButton_accepted(){};
+  void on_executeDenoisingButton_accepted();
   void on_executeDenoisingButton_rejected(){};
 
   /** Slots for the Data Manager window */
@@ -297,8 +297,6 @@ private slots:
   void on_imageInterpolationComboBox_currentIndexChanged(int index);
   void on_maskInterpolationComboBox_currentIndexChanged(int index);
 
-  void on_smoothThresholdCheckBox_stateChanged(int);
-  void on_smoothThresholdSlider_valueChanged(int);
   void on_histogramBarsComboBox_currentIndexChanged(int index);
   void on_histogramColorScaleCheckBox_stateChanged(int);
   void on_snapColorsToBarsCheckBox_stateChanged(int);

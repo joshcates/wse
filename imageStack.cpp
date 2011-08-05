@@ -8,6 +8,11 @@ imageStack::imageStack():
 
 imageStack::~imageStack()
 {
+  // TODO: Clean up images stored in this stack
+  for (unsigned int i = 0; i < mImages.size(); i++)
+    {
+      //      delete mImages[i];
+    }
 }
 
 bool imageStack::addImage(QString fname)
@@ -29,8 +34,7 @@ bool imageStack::removeImage(QString fname)
     {
       delete mImages[i];
       mImages.erase(mImages.begin()+i);
-      if (mSelectedImage == (int) i)
-        mSelectedImage = -1;
+      if (mSelectedImage == (int) i) { mSelectedImage = -1; }
       return true;
     }
   }
@@ -63,10 +67,10 @@ vtkImageImport *imageStack::selectedImageVTK(bool original)
 {
   if (mSelectedImage >= 0)
   {
-     if (original)
+    //     if (original)
        return mImages[mSelectedImage]->originalVTK();
-     else
-       return mImages[mSelectedImage]->modifiedVTK();
+       //  else
+       // return mImages[mSelectedImage]->modifiedVTK();
   }
   return 0;
 }
@@ -76,10 +80,10 @@ const vtkImageImport *imageStack::selectedImageVTK(bool original) const
 {
   if (mSelectedImage >= 0)
   {
-     if (original)
+    //     if (original)
        return mImages[mSelectedImage]->originalVTK();
-     else
-       return mImages[mSelectedImage]->modifiedVTK();
+       // else
+       // return mImages[mSelectedImage]->modifiedVTK();
   }
   return 0;
 }

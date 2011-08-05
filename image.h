@@ -15,16 +15,24 @@
 #include "itkNearestNeighborInterpolateImageFunction.h"
 #include "itkDiscreteGaussianImageFilter.h"
 
+/** */
 class Image
 {
 public:
-  
   typedef itk::Image<float,3> itkFloatImage;
   typedef itk::LinearInterpolateImageFunction<itkFloatImage, double >  LinearInterpolatorType;
   typedef itk::NearestNeighborInterpolateImageFunction<itkFloatImage, double >  NearestNeighborInterpolatorType;
 
   Image();
   ~Image();
+
+  Image(itkFloatImage *img);
+
+  //  Image &operator=(itkFloatImage *img)
+  // { 
+  //  mOriginal = img; 
+  //  return *this;
+  // }
 
   bool load(QString fname);
 
@@ -85,16 +93,17 @@ public:
 
 
   itkFloatImage::Pointer original() { return mOriginal; }
-  itkFloatImage::Pointer modified() { return mModified; }
+  //  itkFloatImage::Pointer modified() { return mModified; }
   
   const vtkImageImport *originalVTK() const { return mVTKImportOriginal; }
-  const vtkImageImport *modifiedVTK() const { return mVTKImportModified; }
+  //  const vtkImageImport *modifiedVTK() const { return mVTKImportModified; }
   vtkImageImport *originalVTK() { return mVTKImportOriginal;}
-  vtkImageImport *modifiedVTK() { return mVTKImportModified;}
+  //  vtkImageImport *modifiedVTK() { return mVTKImportModified;}
   //  vtkImageImport *resampledVTK(SmoothSettings settings);
   
-  QColor color() { return mColor; }
-  QString name() { return mName; }
+  QColor color() const { return mColor; } 
+  QString name() const { return mName; } 
+  void name(const QString &n)  { mName = n; }
   
   LinearInterpolatorType::Pointer mLinearInterpolator;
   NearestNeighborInterpolatorType::Pointer mNearestInterpolator;
@@ -108,7 +117,7 @@ private:
   void generateGaussian();
 
   itkFloatImage::Pointer mOriginal;
-  itkFloatImage::Pointer mModified;
+  //  itkFloatImage::Pointer mModified;
   itkFloatImage::RegionType mOriginalRegion;
   QColor mColor;
   QString mName;
@@ -116,10 +125,10 @@ private:
   /** These members can act as VTK pipeline sources.  vtkImageImport is
       connected to itk::VTKImageExport. */
   vtkImageImport * mVTKImportOriginal;
-  vtkImageImport * mVTKImportModified;
+  //  vtkImageImport * mVTKImportModified;
   vtkImageImport * mVTKImportResampled;
   itk::VTKImageExport<itkFloatImage>::Pointer mITKExporterOriginal;
-  itk::VTKImageExport<itkFloatImage>::Pointer mITKExporterModified;
+  //  itk::VTKImageExport<itkFloatImage>::Pointer mITKExporterModified;
   itk::VTKImageExport<itkFloatImage>::Pointer mITKExporterResampled;
 
   //  SmoothSettings lastSmoothSettings;

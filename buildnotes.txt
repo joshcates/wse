@@ -6,6 +6,8 @@ Advanced CMake menu.  First configure the GUI support, then QT support.)
 Builds easiest with VTK 5.4.2.  Building with VTK versions greater than 5.4.2
 needed to configure VTK build without objective c garbage collection.
 
+QThread notes: 
 
-
-
+http://labs.qt.nokia.com/2010/06/17/youre-doing-it-wrong/
+http://blog.exys.org/entries/2010/QThread_affinity.html
+http://doc.qt.nokia.com/qq/qq27-responsive-guis.html

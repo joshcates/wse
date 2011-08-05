@@ -16,10 +16,10 @@
 
 Image::Image():
   mOriginal(NULL),
-  mModified(NULL),
+  //  mModified(NULL),
   mName(""),
   mVTKImportOriginal(NULL),
-  mVTKImportModified(NULL),
+  //  mVTKImportModified(NULL),
   mImageGaussian(NULL)
 {
   mColor = QColor(100,100,100);
@@ -29,32 +29,21 @@ Image::Image():
 
 Image::~Image()
 {
-  if (mVTKImportModified != NULL) mVTKImportModified->Delete();
+  // if (mVTKImportModified != NULL) mVTKImportModified->Delete();
   if (mVTKImportOriginal != NULL) mVTKImportOriginal->Delete();
 }
 
-bool Image::load(QString fname)
+Image::Image(itkFloatImage *img)
 {
-  itk::ImageFileReader<itkFloatImage>::Pointer reader =
-    itk::ImageFileReader<itkFloatImage>::New();
+  mOriginal = img;
   
-  reader->SetFileName(fname.toAscii());
-  reader->Update();
-
-  mOriginal = reader->GetOutput();
-  
-  unsigned long x = mOriginal->GetLargestPossibleRegion().GetSize()[0];
-  unsigned long y = mOriginal->GetLargestPossibleRegion().GetSize()[1];
-  unsigned long z = mOriginal->GetLargestPossibleRegion().GetSize()[2];
+  // unsigned long x = mOriginal->GetLargestPossibleRegion().GetSize()[0];
+  // unsigned long y = mOriginal->GetLargestPossibleRegion().GetSize()[1];
+  // unsigned long z = mOriginal->GetLargestPossibleRegion().GetSize()[2];
 
   mOriginalRegion = mOriginal->GetLargestPossibleRegion();
 
-    std::cerr << "\nLoaded image ('" << fname.toAscii().data() << "'\n"
-    << "with dimensions: [" << x << ", " << y << ", " << z << "]\n";
-  
   itkFloatImage::PointType origin = mOriginal->GetOrigin();
-
-    std::cerr << "with origin (" << origin[0] << ", " << origin[1] << ", " << origin[2] << ")\n";
 
   // Hook up the ITK->VTK conversion pipeline.
   mVTKImportOriginal   = vtkImageImport::New();
@@ -66,8 +55,51 @@ bool Image::load(QString fname)
   mVTKImportResampled = NULL;
 
   vtkImageData *imageData = originalVTK()->GetOutput();
-  double *scalarRange = imageData->GetScalarRange();
-  std::cerr << "Scalar Range = [" << scalarRange[0] << ", " << scalarRange[1] << "]\n";
+  //  double *scalarRange = imageData->GetScalarRange();
+
+  mLinearInterpolator = LinearInterpolatorType::New();
+  mLinearInterpolator->SetInputImage(mOriginal);
+
+  mNearestInterpolator = NearestNeighborInterpolatorType::New();
+  mNearestInterpolator->SetInputImage(mOriginal);
+}
+
+
+bool Image::load(QString fname)
+{
+  itk::ImageFileReader<itkFloatImage>::Pointer reader =
+    itk::ImageFileReader<itkFloatImage>::New();
+  
+  reader->SetFileName(fname.toAscii());
+  reader->Update();
+
+  mOriginal = reader->GetOutput();
+  
+  // unsigned long x = mOriginal->GetLargestPossibleRegion().GetSize()[0];
+  // unsigned long y = mOriginal->GetLargestPossibleRegion().GetSize()[1];
+  // unsigned long z = mOriginal->GetLargestPossibleRegion().GetSize()[2];
+
+  mOriginalRegion = mOriginal->GetLargestPossibleRegion();
+
+  //   std::cerr << "\nLoaded image ('" << fname.toAscii().data() << "'\n"
+  //   << "with dimensions: [" << x << ", " << y << ", " << z << "]\n";
+  
+  itkFloatImage::PointType origin = mOriginal->GetOrigin();
+
+  //  std::cerr << "with origin (" << origin[0] << ", " << origin[1] << ", " << origin[2] << ")\n";
+
+  // Hook up the ITK->VTK conversion pipeline.
+  mVTKImportOriginal   = vtkImageImport::New();
+  mITKExporterOriginal = itk::VTKImageExport<itkFloatImage>::New();
+  mITKExporterOriginal->SetInput(mOriginal);
+  ConnectPipelines(mITKExporterOriginal,mVTKImportOriginal);
+
+  mVTKImportOriginal->Update();
+  mVTKImportResampled = NULL;
+
+  vtkImageData *imageData = originalVTK()->GetOutput();
+  //  double *scalarRange = imageData->GetScalarRange();
+  //  std::cerr << "Scalar Range = [" << scalarRange[0] << ", " << scalarRange[1] << "]\n";
 
   mLinearInterpolator = LinearInterpolatorType::New();
   mLinearInterpolator->SetInputImage(mOriginal);
