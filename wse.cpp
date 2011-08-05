@@ -218,12 +218,12 @@ void wseGUI::setupUI()
   mImportAction->setToolTip(tr("Import"));
   mImportAction->setStatusTip(tr("Import registered images"));
   mImportAction->setCheckable(true);
+  connect(mImportAction, SIGNAL(triggered()), this, SLOT(on_addButton_released()));
   
   mExportAction = new QAction(QIcon(":/WSE/Resources/export.png"), tr("&Export"), this);
   mExportAction->setToolTip(tr("Export"));
   mExportAction->setStatusTip(tr("Export model"));
   mExportAction->setCheckable(true);
-  connect(mExportAction, SIGNAL(triggered()), this, SLOT(exportPage()));
 
   QActionGroup *toolBarGroup = new QActionGroup(this);
   toolBarGroup->addAction(mImportAction);
@@ -244,7 +244,8 @@ void wseGUI::setupUI()
   QAction *exitAction = new QAction(tr("E&xit"), this);
   exitAction->setShortcut(tr("Ctrl+Q"));
   exitAction->setStatusTip(tr("Exit the application"));
-  connect(mImportImageAction, SIGNAL(triggered()), this, SLOT(importAdd()));
+
+  connect(mImportImageAction, SIGNAL(triggered()),this,SLOT(on_addButton_released()));
   connect(mExportColormapAction, SIGNAL(triggered()), this, SLOT(exportImage()));
   connect(exitAction, SIGNAL(triggered()), qApp, SLOT(closeAllWindows()));
 
@@ -351,8 +352,6 @@ void wseGUI::setupUI()
   ui.imageListWidget->setDragDropMode(QAbstractItemView::DropOnly);
   ui.imageListWidget->setStatusTip(tr("Select the '+' icon or drag and drop images"));
 
-  //  connect(ui.imageListWidget, SIGNAL(itemSelectionChanged()), this, SLOT(importSelectionChanged()));
-  connect(ui.addButton, SIGNAL(released()), this, SLOT(importAdd()));
   connect(ui.deleteButton, SIGNAL(released()), this, SLOT(importDelete()));
   connect(ui.sliceSelector,SIGNAL(valueChanged(int)), this, SLOT(viewerChangeSlice()));
   ui.sliceSelector->setTracking(true);
@@ -732,24 +731,6 @@ void wseGUI::visualizePage()
 
 }
 
-
-void wseGUI::exportPage()
-{
-  //  if (mExportDirty)
-  //   {
-  //     // Update list widgets
-  //     ui.exportClassListWidget->clear();
-
-  //     ui.exportButton->setEnabled(false);
-  //     mExportColormapAction->setEnabled(false);
-  //     ui.exportDisplay->setBackground(QImage());
-  //     mExportDirty = false;
-  //   }
-
-  //   ui.stackedWidget->setCurrentIndex(4);
-}
-
-
 void wseGUI::viewerChangeSlice()
 {
   if (mImageData == -1) {
@@ -829,7 +810,7 @@ void wseGUI::on_imageListWidget_itemSelectionChanged()
   }
 }
 
-void wseGUI::importAdd()
+void wseGUI::on_addButton_released()
 {
   QStringList files = QFileDialog::getOpenFileNames(this, tr("Import Images"),
                                                     g_settings->value("import_path").toString(), 

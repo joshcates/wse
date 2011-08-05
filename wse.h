@@ -107,9 +107,7 @@ public:
 
 public slots:
   void visualizePage();
-  void exportPage();
-  //  void importSelectionChanged();
-  void importAdd();
+
   void importDelete();
   void imageDropped(QString);
   void exportListItemChanged(QListWidgetItem *item);
@@ -278,6 +276,7 @@ private slots:
   /** Slots for the Data Manager window */
   void on_imageListWidget_itemSelectionChanged();
   void on_setImageDataButton_released();
+  void on_addButton_released();
 
 
   void on_clipThresholdCheckBox_stateChanged(int );
