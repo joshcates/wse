@@ -2,13 +2,14 @@
 #define WSE_H
 
 // TODO clean up VTK objects in destructor -jc
+#include <string>
+#include <vector>
 
 #include <QtGui/QMainWindow>
 #include <QtGui/QProgressBar>
 #include <QSettings>
 #include <QDebug>
 #include "ui_wse.h"
-#include <vector>
 
 // for the image viewer
 #include "vtkRenderWindow.h"
@@ -41,9 +42,13 @@
 #include "qwt_color_map.h"
 #include "qwt_scale_widget.h"
 
-
 // ITK includes
+#include "itkCommand.h"
 #include "itkImage.h"
+#include "QThreadITKFilter.hxx"
+#include "itkDiscreteGaussianImageFilter.h"
+#include "itkGradientAnisotropicDiffusionImageFilter.h"
+#include "itkCurvatureAnisotropicDiffusionImageFilter.h"
 
 //#include "IsoRenderer.h"
 
@@ -53,7 +58,6 @@
 #define ISO_SURFACE 1
 #define ISO_MESH 2
 #define ISO_POINT 3
-
 
 namespace wse {
 
@@ -109,6 +113,8 @@ public:
   bool addImageFromData(Image *img);
 
   static QSettings *g_settings;
+
+  QProgressBar *getProgressBar() { return ui.progressBar; }
 
 public slots:
   void visualizePage();
@@ -166,6 +172,27 @@ public slots:
   //float cmdLineComputePercentage(std::string data, std::string mask, float intensity);
 
 private:
+  void output(const char *s)  
+  {  
+    ui.outputConsole->append(QTime::currentTime().toString() + QString("> ") + QString(s)); 
+    ui.outputConsole->update();
+    QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+
+  }
+  void output(const QString &s)  
+  { 
+    ui.outputConsole->append(QTime::currentTime().toString() + QString("> ") + s);  
+    ui.outputConsole->update();
+    QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+  }
+  void output(const std::string &s)  
+  { 
+    ui.outputConsole->append(QTime::currentTime().toString() + QString("> ") + QString(s.c_str()) );  
+    ui.outputConsole->update();
+    QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+
+  }
+
   void setupUI();
   void setupWatershedWindowUI();
   void readSettings();
@@ -205,6 +232,7 @@ private:
   QAction *mViewControlWindowAction;
   QAction *mViewDataWindowAction;
   QAction *mViewWatershedWindowAction;
+  QAction *mViewConsoleWindowAction;
   QAction *mEditAddAction;
   QAction *mEditSubtractAction;
   QAction *mEditMergeAction;
@@ -271,13 +299,13 @@ private slots:
   void on_anisotropicRadioButton_toggled(bool);
   void on_curvatureRadioButton_toggled(bool);
   void on_executeDenoisingButton_accepted();
-  void on_executeDenoisingButton_rejected(){};
+  void on_executeDenoisingButton_rejected()
+  { this->requestAbortITKFilter(); };
 
   /** Slots for the Data Manager window */
   void on_imageListWidget_itemSelectionChanged();
   void on_setImageDataButton_released();
   void on_addButton_released();
-
 
   void on_clipThresholdCheckBox_stateChanged(int );
   void on_thresholdOpacitySlider_valueChanged(int value);
@@ -303,14 +331,41 @@ private slots:
   void on_smoothGroupBox_toggled(bool expanded);
   void on_advancedOptionsGroupBox_toggled(bool expanded);
 
-  //  void on_lowerThresholdSpinBox_valueChanged(double);
+  // Won't connect automatically
+  void mITKFilteringThread_finished();
+  void mITKFilteringThread_started();
+  void mITKFilteringThread_progress(itk::Object *caller, const itk::EventObject& event);
+
+  // void on_lowerThresholdSpinBox_valueChanged(double);
   // void on_upperThresholdSpinBox_valueChanged(double);
 
 protected:
   // override the wheelEvent to move slices with the mousewheel
   void wheelEvent(QWheelEvent *event);
 
+ private:
+  itk::QThreadITKFilter<itk::ImageToImageFilter<itkFloatImage,itkFloatImage> > *mITKFilteringThread;
+
+  /** Perform Gaussian filtering on a selected image. */
+  void runGaussianFiltering();
+
+  /** Perform Anisotropic Diffusion filtering on a selected image. */
+  void runAnisotropicFiltering();
+
+  /** Perform Curvature Anisotropic Diffusion filtering on a selected image. */
+  void runCurvatureFiltering();
+
+  /** Requests termination of filtering operations. */
+  void requestAbortITKFilter()
+  {
+    if ( mITKFilteringThread->isFiltering() ) {  mITKFilteringThread->filter()->SetAbortGenerateData(true); }
+  }
+
 };
+
+
+
+
 
 } // end namespace wse
 

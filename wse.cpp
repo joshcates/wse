@@ -53,8 +53,7 @@
 #include "qwt_scale_widget.h"
 #include "qwt_scale_engine.h"
 
-#include "QThreadITKFilter.hxx"
-#include "itkDiscreteGaussianImageFilter.h"
+
 //#include "IsoRenderer.h"
 
 namespace wse {
@@ -125,12 +124,15 @@ wseGUI::wseGUI(QWidget *parent, Qt::WFlags flags) :
   //  mScalarMethod = 0;
   mFullScreen = false;
   mPercentageShown = false;
+  mITKFilteringThread =  new itk::QThreadITKFilter<itk::ImageToImageFilter<itkFloatImage,itkFloatImage> >;
 
   this->init();
 }
 
 wseGUI::~wseGUI()
 {
+  delete mITKFilteringThread;
+
   if (mImageStack) { delete mImageStack; }
   //mVTKImageViewer->Delete();
   mSliceViewer->Delete();
@@ -187,6 +189,10 @@ void wseGUI::init()
   mRegisteredComboBoxes.push_back(ui.denoisingInputComboBox);
   mRegisteredComboBoxes.push_back(ui.watershedInputComboBox);
   mRegisteredComboBoxes.push_back(ui.gradientInputComboBox);
+
+  // Connect multithreading slots with signals
+  connect(mITKFilteringThread,SIGNAL(finished()),this,SLOT(mITKFilteringThread_finished()));
+  connect(mITKFilteringThread,SIGNAL(started()),this,SLOT(mITKFilteringThread_started()));
 }
 
 void wseApplication::loadStyleSheet(const char *fn)
@@ -208,6 +214,8 @@ void wseGUI::setupUI()
   // mIsoRenderer = new IsoRenderer();
   // ui.vtkRenderWidget->GetRenderWindow()->AddRenderer(mIsoRenderer->getSurfaceRenderer());
   // ui.vtkRenderWidget->show();
+  
+  ui.progressBar->hide();
 
   PickerCallback *mPickerCallback = new PickerCallback(this);
   mPointPicker = vtkPointPicker::New();
@@ -237,8 +245,10 @@ void wseGUI::setupUI()
 
   ui.mainToolBar->addAction(mImportAction);
   ui.mainToolBar->setIconSize(QSize(30,30));
-  ui.mainToolBar->show();
-  ui.mainToolBar->setEnabled(true);
+
+  // HIDE TOOLBAR FOR NOW
+  ui.mainToolBar->hide();
+  ui.mainToolBar->setEnabled(false);
   
   // Menubar
   mImportImageAction = new QAction(tr("Load Volume"), this);
@@ -309,6 +319,9 @@ void wseGUI::setupUI()
 
   mViewDataWindowAction = new QAction(tr("View Data Window"), this);
   connect(mViewDataWindowAction, SIGNAL(triggered()), ui.dataDockWidget, SLOT(show()));
+
+  mViewConsoleWindowAction = new QAction(tr("View Console"), this);
+  connect(mViewConsoleWindowAction, SIGNAL(triggered()), ui.consoleDockWidget, SLOT(show()));
   
   QMenu *viewMenu = ui.menuBar->addMenu(tr("&View"));
   viewMenu->setTearOffEnabled(true);
@@ -323,7 +336,8 @@ void wseGUI::setupUI()
   viewMenu->addSeparator();
   viewMenu->addAction(mViewDataWindowAction);
   viewMenu->addAction(mViewWatershedWindowAction);
-  viewMenu->addAction(mViewControlWindowAction);
+  viewMenu->addAction(mViewConsoleWindowAction);
+  //  viewMenu->addAction(mViewControlWindowAction);
 
   // Construct the edit menu
   mEditAddAction       = new QAction(tr("Add"), this);
@@ -432,8 +446,6 @@ void wseGUI::setupUI()
   mThresholdTimer.setSingleShot(true);
   connect(&mThresholdTimer, SIGNAL(timeout()), this, SLOT(thresholdTimerEvent()));
 
-
-
   // the scalar schemes
   // std::vector<ScalarMethod> scalarMethods = ScalarMethod::getScalarMethods();
   // for (unsigned int i = 0; i < scalarMethods.size(); ++i) {
@@ -517,6 +529,7 @@ void wseGUI::populateImageDataComboBoxes()
 	{
 	  mRegisteredComboBoxes[j]->addItem(ui.imageListWidget->item(i)->text());
 	}
+      //      mRegisteredComboBoxes[j].setCurrentIndex(0);
     }
 }
   
@@ -784,13 +797,12 @@ void wseGUI::updateImageDisplay() {
     mSliceViewer->DisableDisplay();
   }
 
-  QTime startTime =  QTime::currentTime();
+  //  QTime startTime =  QTime::currentTime();
 
+  this->updateHistogram();
 
-  updateHistogram();
-
-  qint32 msecs = startTime.msecsTo( QTime::currentTime() );
-  std::cerr << "Histogram generation took " << msecs << "ms\n";
+  //  qint32 msecs = startTime.msecsTo( QTime::currentTime() );
+  //  std::cerr << "Histogram generation took " << msecs << "ms\n";
 
   visualizePage();
   setMouseHandling();
@@ -922,6 +934,8 @@ bool wseGUI::addImageFromData(Image *img)
 
 bool wseGUI::addImageFromFile(QString fname)
 {
+  this->output(QString("Loading volume from ") + fname);
+
   if (mImageStack->addImage(fname))
   {
     QListWidgetItem *item = new QListWidgetItem;
@@ -936,6 +950,7 @@ bool wseGUI::addImageFromFile(QString fname)
   }
   else
   {
+    this->output(QString("Error loading ") + fname);
     int ret = QMessageBox::warning(this, tr("WSE"),
                                    tr("There was an error loading image at $1!").arg(fname),
                                    QMessageBox::Ok);
@@ -944,11 +959,9 @@ bool wseGUI::addImageFromFile(QString fname)
   }
   QFileInfo fi(fname);
   QString path = fi.canonicalPath();
-  if (!path.isNull())
-    g_settings->setValue("import_path", path);
+  if (!path.isNull()) {  g_settings->setValue("import_path", path); }
   
   this->populateImageDataComboBoxes();
-
   return true;
 }
 
@@ -1047,7 +1060,7 @@ void wseGUI::updateProgress(int p) {
 }
 
 void wseGUI::updateHistogram() {
-  std::cerr << "\nComputing histogram...\n";
+  this->output("Updating the histogram ...");
   
   // If no image data is set, do not update histogram
   if (mImageData < 0) {
@@ -1065,9 +1078,7 @@ void wseGUI::updateHistogram() {
     return;
   }
   
- 
   delete mHistogram;
-
 
   Image::itkFloatImage::Pointer image = mImageStack->image(mImageData)->original();
   Image::itkFloatImage::Pointer mask(NULL);
@@ -1082,11 +1093,9 @@ void wseGUI::updateHistogram() {
   ui.lowerThresholdSpinBox->setRange(mHistogram->min(), mHistogram->max());
   ui.upperThresholdSpinBox->setRange(mHistogram->min(), mHistogram->max());
 
-  std::cerr << "hist min = " << mHistogram->min() <<std::endl;
-  std::cerr << "hist max = " << mHistogram->max() << std::endl;
-  std::cerr << "hist mean = " << mHistogram->mean() <<std::endl;
-  std::cerr << "hist stdev = " << mHistogram->stdev() << std::endl;
-  std::cerr << "hist pixels = " << mHistogram->pixelCount() << std::endl;
+  this->output(QString("histogram min, max = %1, %2").arg(mHistogram->min()).arg(mHistogram->max()));
+  this->output(QString("histogram mean, stdev = %1, %2").arg(mHistogram->mean()).arg(mHistogram->stdev()));
+  this->output(QString("histogram pixel count = %1").arg(mHistogram->pixelCount()));
 
   mPoints.clear();
   for (unsigned int bin = 0; bin < mHistogram->numBins(); bin++) {
@@ -1906,44 +1915,27 @@ void wseGUI::on_curvatureRadioButton_toggled(bool on)
 void wseGUI::on_executeDenoisingButton_accepted()
 {
   // No image data selected.
-  // TODO: add message box to this effect
-  if (mImageData == -1) return;
-
-  if (ui.gaussianRadioButton->isChecked())
+  // TODO: Add message boxes for errors
+  if (ui.denoisingInputComboBox->currentIndex() == -1) 
     {
-      //      itk::QThreadITKFilter<itk::DiscreteGaussianImageFilter<itkFloatImage,itkFloatImage> >::Pointer filter 
-      //	= itk::QThreadITKFilter<itk::DiscreteGaussianImageFilter<itkFloatImage,itkFloatImage> >::New();
- 
-      itk::DiscreteGaussianImageFilter<itkFloatImage,itkFloatImage>::Pointer filter
-	=  itk::DiscreteGaussianImageFilter<itkFloatImage,itkFloatImage>::New();
-      filter->SetInput(mImageStack->image(mImageData)->original());
-      filter->SetVariance(ui.smoothingSigmaInputBox->value());
-      filter->SetUseImageSpacingOff();
-
-      filter->UpdateLargestPossibleRegion();
-
-
-      //      filter->start();
-
-      // TODO: unique image names?
-      Image *img = new Image(filter->GetOutput());
-      img->name(QString("DiscreteGaussianImageFilter+")+mImageStack->image(mImageData)->name());
-
-
-      this->addImageFromData(img);
-      //mImageStack->addImage( new Image(filter->GetOutput()) );
-      
-
-      // std::cout << "GAUSSIAN" << std::endl;
+      QMessageBox::warning(this, "WSE", QString("Please select image data first."));
+      return;
     }
-  else if (ui.anisotropicRadioButton->isChecked())
+  
+  // Are we processing?
+  if (mITKFilteringThread->isFiltering())
     {
-      // std::cout << "ANISOTROPIC" << std::endl;
+      QMessageBox::warning(this, "WSE", QString("Please wait until the current filtering operation has finished."));
+      return;
     }
-  else if (ui.curvatureRadioButton->isChecked())
-    {
-      // std::cout << "CURVATURE" << std::endl;
-    }
+  
+  if (ui.gaussianRadioButton->isChecked())         { this->runGaussianFiltering();    }
+  else if (ui.anisotropicRadioButton->isChecked()) { this->runAnisotropicFiltering(); }
+  else if (ui.curvatureRadioButton->isChecked())   { this->runCurvatureFiltering();   }
 }
+
+
+
+
 
 } // end namespace

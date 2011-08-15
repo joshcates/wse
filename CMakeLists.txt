@@ -49,7 +49,7 @@ include_directories(wseGraphics)
 SET( WSE_SRCS
      main.cpp
      wse.cpp
-#     wseProcessing.cpp
+     wseProcessing.cpp
      image.cpp
      widgets.cpp
      histogramWidget.cpp

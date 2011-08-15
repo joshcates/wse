@@ -49,9 +49,6 @@
         <bool>true</bool>
        </property>
        <layout class="QVBoxLayout" name="verticalLayout_4">
-        <property name="margin">
-         <number>0</number>
-        </property>
         <item>
          <widget class="QSplitter" name="viewSplitter">
           <property name="sizePolicy">
@@ -206,24 +203,9 @@
        <property name="flat">
         <bool>true</bool>
        </property>
-       <layout class="QVBoxLayout" name="verticalLayout_6" stretch="0">
-        <property name="spacing">
-         <number>5</number>
-        </property>
+       <layout class="QVBoxLayout" name="verticalLayout_6">
         <property name="sizeConstraint">
          <enum>QLayout::SetDefaultConstraint</enum>
-        </property>
-        <property name="leftMargin">
-         <number>0</number>
-        </property>
-        <property name="topMargin">
-         <number>5</number>
-        </property>
-        <property name="rightMargin">
-         <number>0</number>
-        </property>
-        <property name="bottomMargin">
-         <number>0</number>
         </property>
         <item>
          <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -306,6 +288,13 @@
            </layout>
           </item>
          </layout>
+        </item>
+        <item>
+         <widget class="QProgressBar" name="progressBar">
+          <property name="value">
+           <number>24</number>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>
@@ -1229,7 +1218,7 @@
               <x>0</x>
               <y>0</y>
               <width>341</width>
-              <height>644</height>
+              <height>401</height>
              </rect>
             </property>
             <attribute name="label">
@@ -1422,7 +1411,7 @@
               <x>0</x>
               <y>0</y>
               <width>331</width>
-              <height>659</height>
+              <height>416</height>
              </rect>
             </property>
             <attribute name="label">
@@ -1460,7 +1449,7 @@
               <x>0</x>
               <y>0</y>
               <width>331</width>
-              <height>659</height>
+              <height>416</height>
              </rect>
             </property>
             <attribute name="label">
@@ -1692,6 +1681,9 @@
    </widget>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
    <property name="windowTitle">
     <string>toolBar</string>
    </property>
@@ -1701,6 +1693,37 @@
    <attribute name="toolBarBreak">
     <bool>false</bool>
    </attribute>
+  </widget>
+  <widget class="QDockWidget" name="consoleDockWidget">
+   <property name="minimumSize">
+    <size>
+     <width>104</width>
+     <height>130</height>
+    </size>
+   </property>
+   <property name="features">
+    <set>QDockWidget::DockWidgetClosable|QDockWidget::DockWidgetMovable</set>
+   </property>
+   <property name="allowedAreas">
+    <set>Qt::BottomDockWidgetArea</set>
+   </property>
+   <property name="windowTitle">
+    <string>Console</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>8</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_4">
+    <layout class="QVBoxLayout" name="verticalLayout_26">
+     <item>
+      <widget class="QTextEdit" name="outputConsole">
+       <property name="readOnly">
+        <bool>true</bool>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
   </widget>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
