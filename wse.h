@@ -49,6 +49,7 @@
 #include "itkDiscreteGaussianImageFilter.h"
 #include "itkGradientAnisotropicDiffusionImageFilter.h"
 #include "itkCurvatureAnisotropicDiffusionImageFilter.h"
+#include "itkGradientMagnitudeImageFilter.h"
 
 //#include "IsoRenderer.h"
 
@@ -301,6 +302,9 @@ private slots:
   void on_executeDenoisingButton_accepted();
   void on_executeDenoisingButton_rejected()
   { this->requestAbortITKFilter(); };
+  void on_executeGradientButton_accepted();
+  void on_executeGradientButton_rejected()
+  { this->requestAbortITKFilter(); };
 
   /** Slots for the Data Manager window */
   void on_imageListWidget_itemSelectionChanged();
@@ -354,6 +358,9 @@ protected:
 
   /** Perform Curvature Anisotropic Diffusion filtering on a selected image. */
   void runCurvatureFiltering();
+
+  /** Run the gradient magnitude image filter. */
+  void runGradientFiltering();
 
   /** Requests termination of filtering operations. */
   void requestAbortITKFilter()

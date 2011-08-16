@@ -1210,7 +1210,7 @@
             </size>
            </property>
            <property name="currentIndex">
-            <number>0</number>
+            <number>1</number>
            </property>
            <widget class="QWidget" name="smoothingTab">
             <property name="geometry">
@@ -1218,7 +1218,7 @@
               <x>0</x>
               <y>0</y>
               <width>341</width>
-              <height>401</height>
+              <height>470</height>
              </rect>
             </property>
             <attribute name="label">
@@ -1411,11 +1411,11 @@
               <x>0</x>
               <y>0</y>
               <width>331</width>
-              <height>416</height>
+              <height>485</height>
              </rect>
             </property>
             <attribute name="label">
-             <string>Gradient</string>
+             <string>Gradient Magnitude</string>
             </attribute>
             <layout class="QVBoxLayout" name="verticalLayout_22">
              <item>
@@ -1435,7 +1435,7 @@
               </spacer>
              </item>
              <item>
-              <widget class="QDialogButtonBox" name="buttonBox_2">
+              <widget class="QDialogButtonBox" name="executeGradientButton">
                <property name="standardButtons">
                 <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
                </property>
@@ -1449,7 +1449,7 @@
               <x>0</x>
               <y>0</y>
               <width>331</width>
-              <height>416</height>
+              <height>485</height>
              </rect>
             </property>
             <attribute name="label">

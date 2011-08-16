@@ -105,5 +105,25 @@ void wseGUI::runCurvatureFiltering()
   this->addImageFromData(img);
 }
 
+void wseGUI::runGradientFiltering()
+{
+  this->output(QString("Running the gradient magnitude filter."));
+
+  itk::GradientMagnitudeImageFilter<itkFloatImage, itkFloatImage>::Pointer filter = 
+    itk::GradientMagnitudeImageFilter<itkFloatImage, itkFloatImage>::New();
+  filter->SetInput(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->original());
+  filter->SetUseImageSpacingOff();
+  
+  // MULTITHREADING:
+  mITKFilteringThread->setFilter(filter);
+  mITKFilteringThread->start();
+  
+  Image *img = new Image(filter->GetOutput());
+  img->name(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->name() + QString(" (grad. magnitude)"));
+  this->addImageFromData(img);
+}
+
+
+
 
 } //end namespace wse

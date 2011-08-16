@@ -1934,8 +1934,24 @@ void wseGUI::on_executeDenoisingButton_accepted()
   else if (ui.curvatureRadioButton->isChecked())   { this->runCurvatureFiltering();   }
 }
 
-
-
-
+void wseGUI::on_executeGradientButton_accepted()
+{
+  // No image data selected.
+  // TODO: Add message boxes for errors
+  if (ui.gradientInputComboBox->currentIndex() == -1) 
+    {
+      QMessageBox::warning(this, "WSE", QString("Please select image data first."));
+      return;
+    }
+  
+  // Are we processing?
+  if (mITKFilteringThread->isFiltering())
+    {
+      QMessageBox::warning(this, "WSE", QString("Please wait until the current filtering operation has finished."));
+      return;
+    }
+  
+  this->runGradientFiltering();
+}
 
 } // end namespace
