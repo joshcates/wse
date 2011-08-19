@@ -1,60 +1,9 @@
 #include "wse.h"
-#include "image.h"
-#include "imageStack.h"
-#include <QDebug>
-#include "vtkImageData.h"
-#include <iostream>
-#include <vector>
-#include <iostream>
-#include <sstream>
 
-#include "itkScalarImageToListAdaptor.h"
-#include "itkListSampleToHistogramGenerator.h"
-#include "itkScalarImageToHistogramGenerator.h"
-
-#include "vtkProperty2D.h"
-#include "vtkProperty.h"
-
-#include "vtkImageAccumulate.h"
-#include "vtkImageExtractComponents.h"
-#include "vtkImageBlend.h"
-#include "vtkMarchingCubes.h"
-
-#include "itkImageDuplicator.h"
-#include "vtkPolyDataNormals.h"
-#include "vtkImageGradientMagnitude.h"
-#include "vtkFloatArray.h"
-#include "vtkPointData.h"
-#include "vtkSmoothPolyDataFilter.h"
-#include "vtkImageGaussianSmooth.h"
-#include "vtkImageActor.h"
-#include "vtkImageMapToWindowLevelColors.h"
-#include "vtkPointPicker.h"
-#include "vtkCellArray.h"
-
-#include <limits>
-
-#include "utils.h"
-
-#include "itkImage.h"
-
-#include "vtkSmartPointer.h"
-#include "vtkHedgeHog.h"
-#include "vtkPlane.h"
-
-// Mesh subdivision
-//#include "vtkLinearSubdivisionFilter.h"
-//#include "vtkButterflySubdivisionFilter.h"
-//#include "vtkLoopSubdivisionFilter.h"
-
-//#include "quantification.h"
-
-#include "qwt_color_map.h"
-#include "qwt_scale_widget.h"
-#include "qwt_scale_engine.h"
-
-
-//#include "IsoRenderer.h"
+//#include "itkScalarImageToListAdaptor.h"
+//#include "itkListSampleToHistogramGenerator.h"
+//#include "itkScalarImageToHistogramGenerator.h"
+//#include "itkImageDuplicator.h"
 
 namespace wse {
 
@@ -124,7 +73,7 @@ wseGUI::wseGUI(QWidget *parent, Qt::WFlags flags) :
   //  mScalarMethod = 0;
   mFullScreen = false;
   mPercentageShown = false;
-  mITKFilteringThread =  new itk::QThreadITKFilter<itk::ImageToImageFilter<itkFloatImage,itkFloatImage> >;
+  mITKFilteringThread =  new itk::QThreadITKFilter<itk::ImageToImageFilter<FloatImage::itkImageType,FloatImage::itkImageType> >;
 
   this->init();
 }
@@ -147,43 +96,11 @@ void wseGUI::init()
 
   ui.setupUi(this);
   readSettings();
-  mImageStack = new imageStack();
+  mImageStack = new FloatImageStack();
   
   setupUI();
 
   this->setSliceView();
-  
-//#define LOAD_SAMPLE_DATA
-#ifdef LOAD_SAMPLE_DATA
-  //addImageFromFile(QString("/Users/amorris/carma/data/AFIB_DATA/demri.nrrd"));
-  //addImageFromFile(QString("/Users/amorris/carma/data/AFIB_DATA/LA_endo-seg.nrrd"));
-  //addImageFromFile(QString("/Users/amorris/carma/data/AFIB_DATA/LA_Output.nrrd"));
-
-  //addImageFromFile(QString("/Users/amorris/carma/data/3mo/export/DEMRI.nrrd"));
-  //addImageFromFile(QString("/Users/amorris/carma/data/3mo/export/donut.nrrd"));
-  ////addImageFromFile(QString("/Users/amorris/carma/data/3mo/export/donut-cleaned-up.nrrd"));
-  //addImageFromFile(QString("/Users/amorris/carma/data/3mo/export/endo.nrrd"));
-
-  //addImageFromFile(QString("/Users/amorris/carma/data/Weird Example/LGE.nrrd"));
-  //addImageFromFile(QString("/Users/amorris/carma/data/Weird Example/wall-seg.nrrd"));
-  //addImageFromFile(QString("/Users/amorris/carma/data/Weird Example/endo-seg.nrrd"));
-
-  //addImageFromFile(QString("/Users/amorris/carma/data/scar_crash/LGE.nrrd"));
-  //addImageFromFile(QString("/Users/amorris/carma/data/scar_crash/Donut.nrrd"));
-  //addImageFromFile(QString("/Users/amorris/carma/data/scar_crash/Endo.nrrd"));
-
-  addImageFromFile(QString("/Users/amorris/carma/data/Wse Error 122010/demri.nrrd"));
-  addImageFromFile(QString("/Users/amorris/carma/data/Wse Error 122010/wall.nrrd"));
-  addImageFromFile(QString("/Users/amorris/carma/data/Wse Error 122010/endo.nrrd"));
-
-  mImageData = 0;
-  mImageMask = 1;
-  mIsosurfaceImage = 2;
-
-  ui.setImageMaskButton->setEnabled(true);
-  updateImageListIcons();
-  updateImageDisplay();
-#endif
 
   // Register image selection combo box widgets to stay in sync with file names
   mRegisteredImageComboBoxes.push_back(ui.denoisingInputComboBox);
@@ -815,7 +732,7 @@ void wseGUI::updateImageDisplay() {
     {
       mSliceViewer->SetImageMask(NULL);
       
-      Image *image = mImageStack->image(mImageData);
+      FloatImage *image = mImageStack->image(mImageData);
       vtkImageImport *imageImport = image->vtkImporter();
       mSliceViewer->SetInputConnection(imageImport->GetOutputPort());
       
@@ -944,7 +861,7 @@ void wseGUI::imageDropped(QString fname)
   addImageFromFile(fname);
 }
 
-bool wseGUI::addImageFromData(Image *img)
+bool wseGUI::addImageFromData(FloatImage *img)
 {
   if (mImageStack->addImage(img))
   {
@@ -1120,14 +1037,14 @@ void wseGUI::updateHistogram() {
   
   delete mHistogram;
 
-  Image::itkFloatImage::Pointer image = mImageStack->image(mImageData)->itkImage();
-  Image::itkFloatImage::Pointer mask(NULL);
+  FloatImage::itkImageType::Pointer image = mImageStack->image(mImageData)->itkImage();
+  FloatImage::itkImageType::Pointer mask(NULL);
 
   if (mImageMask >= 0) {
     mask = mImageStack->image(mImageMask)->itkImage();
-    mHistogram = new Histogram<Image::itkFloatImage>(image, mask, numBins);
+    mHistogram = new Histogram<FloatImage::itkImageType>(image, mask, numBins);
   } else {
-    mHistogram = new Histogram<Image::itkFloatImage>(image, numBins);
+    mHistogram = new Histogram<FloatImage::itkImageType>(image, numBins);
   }
     
   ui.lowerThresholdSpinBox->setRange(mHistogram->min(), mHistogram->max());

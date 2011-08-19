@@ -1,5 +1,4 @@
 #include "wse.h"
-#include "QThread.h"
 
 namespace wse {
 
@@ -48,8 +47,8 @@ void wseGUI::runGaussianFiltering()
 {
   this->output(QString("Starting Gaussian filtering with sigma %1").arg(ui.smoothingSigmaInputBox->value()));
 
-  itk::DiscreteGaussianImageFilter<itkFloatImage,itkFloatImage>::Pointer filter
-    =  itk::DiscreteGaussianImageFilter<itkFloatImage,itkFloatImage>::New();
+  itk::DiscreteGaussianImageFilter<FloatImage::itkImageType,FloatImage::itkImageType>::Pointer filter
+    =  itk::DiscreteGaussianImageFilter<FloatImage::itkImageType,FloatImage::itkImageType>::New();
   filter->SetInput(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->itkImage());
   filter->SetVariance(ui.smoothingSigmaInputBox->value() * ui.smoothingSigmaInputBox->value());
   filter->SetUseImageSpacingOff();
@@ -58,7 +57,7 @@ void wseGUI::runGaussianFiltering()
   mITKFilteringThread->setFilter(filter);
   mITKFilteringThread->start();
   
-  Image *img = new Image(filter->GetOutput());
+  FloatImage *img = new FloatImage(filter->GetOutput());
   img->name(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->name() + QString(" (gaussian blur)"));
   this->addImageFromData(img);
 }
@@ -67,8 +66,8 @@ void wseGUI::runAnisotropicFiltering()
 {
   this->output(QString("Starting %1 iterations of Classic Anisotropic Diffusion filtering with conductance of %2").arg(ui.conductanceSpinBox->value()).arg(ui.iterationsSpinBox->value()));
 
-  itk::GradientAnisotropicDiffusionImageFilter<itkFloatImage,itkFloatImage>::Pointer filter
-    =  itk::GradientAnisotropicDiffusionImageFilter<itkFloatImage,itkFloatImage>::New();
+  itk::GradientAnisotropicDiffusionImageFilter<FloatImage::itkImageType,FloatImage::itkImageType>::Pointer filter
+    =  itk::GradientAnisotropicDiffusionImageFilter<FloatImage::itkImageType,FloatImage::itkImageType>::New();
   filter->SetInput(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->itkImage());
   filter->SetConductanceParameter(ui.conductanceSpinBox->value());
   filter->SetTimeStep(0.062);
@@ -78,7 +77,7 @@ void wseGUI::runAnisotropicFiltering()
   mITKFilteringThread->setFilter(filter);
   mITKFilteringThread->start();
   
-  Image *img = new Image(filter->GetOutput());
+  FloatImage *img = new FloatImage(filter->GetOutput());
   img->name(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->name() + QString(" (classic anisotropic)"));
   this->addImageFromData(img);
 }
@@ -89,8 +88,8 @@ void wseGUI::runCurvatureFiltering()
 
   this->output(QString("Starting %1 iterations of Curvature Anisotropic Diffusion filtering with conductance of %2").arg(ui.conductanceSpinBox->value()).arg(ui.iterationsSpinBox->value()));
 
-  itk::CurvatureAnisotropicDiffusionImageFilter<itkFloatImage,itkFloatImage>::Pointer filter
-    =  itk::CurvatureAnisotropicDiffusionImageFilter<itkFloatImage,itkFloatImage>::New();
+  itk::CurvatureAnisotropicDiffusionImageFilter<FloatImage::itkImageType,FloatImage::itkImageType>::Pointer filter
+    =  itk::CurvatureAnisotropicDiffusionImageFilter<FloatImage::itkImageType,FloatImage::itkImageType>::New();
   filter->SetInput(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->itkImage());
   filter->SetConductanceParameter(ui.conductanceSpinBox->value());
   filter->SetTimeStep(0.062);
@@ -100,7 +99,7 @@ void wseGUI::runCurvatureFiltering()
   mITKFilteringThread->setFilter(filter);
   mITKFilteringThread->start();
   
-  Image *img = new Image(filter->GetOutput());
+  FloatImage *img = new FloatImage(filter->GetOutput());
   img->name(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->name() + QString(" (curvature anisotropic)"));
   this->addImageFromData(img);
 }
@@ -109,8 +108,8 @@ void wseGUI::runGradientFiltering()
 {
   this->output(QString("Running the gradient magnitude filter."));
 
-  itk::GradientMagnitudeImageFilter<itkFloatImage, itkFloatImage>::Pointer filter = 
-    itk::GradientMagnitudeImageFilter<itkFloatImage, itkFloatImage>::New();
+  itk::GradientMagnitudeImageFilter<FloatImage::itkImageType, FloatImage::itkImageType>::Pointer filter = 
+    itk::GradientMagnitudeImageFilter<FloatImage::itkImageType, FloatImage::itkImageType>::New();
   filter->SetInput(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->itkImage());
   filter->SetUseImageSpacingOff();
   
@@ -118,7 +117,7 @@ void wseGUI::runGradientFiltering()
   mITKFilteringThread->setFilter(filter);
   mITKFilteringThread->start();
   
-  Image *img = new Image(filter->GetOutput());
+  FloatImage *img = new FloatImage(filter->GetOutput());
   img->name(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->name() + QString(" (grad. magnitude)"));
   this->addImageFromData(img);
 }

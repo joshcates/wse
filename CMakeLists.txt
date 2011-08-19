@@ -50,11 +50,11 @@ SET( WSE_SRCS
      main.cpp
      wse.cpp
      wseProcessing.cpp
-     image.cpp
-     widgets.cpp
+#     image.cpp
+    widgets.cpp
      histogramWidget.cpp
      utils.cpp
-     imageStack.cpp
+ #    imageStack.cpp
      wseGraphics/SliceViewer.cc
 #     wseGraphics/IsoRenderer.cpp
      histogram.cpp
@@ -70,7 +70,7 @@ SET ( WSE_HDRS
      histogram.h
      utils.h
      wseGraphics/SliceViewer.h
-     image.h
+#     image.hxx
      colorScheme.h
      colorMaps.h
      wseGraphics/IsoRenderer.h

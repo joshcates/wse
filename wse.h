@@ -1,55 +1,82 @@
 #ifndef WSE_H
 #define WSE_H
 
-// TODO clean up VTK objects in destructor -jc
+// Standard includes
+#include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
+#include <limits>
 
+// Qt includes
 #include <QtGui/QMainWindow>
 #include <QtGui/QProgressBar>
 #include <QSettings>
 #include <QDebug>
 #include "ui_wse.h"
 
-// for the image viewer
+// VTK includes
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkRenderer.h"
-
-// For the isosurface rendering
 #include "vtkContourFilter.h"
 #include "vtkPolyDataMapper.h"
 #include "vtkActor.h"
-#include "vtkImageToStructuredPoints.h"
+#include "vtkActor2D.h"
 #include "vtkProperty.h"
+#include "vtkProperty2D.h"
+#include "vtkImageData.h"
 #include "vtkImageImport.h"
 #include "vtkImageStencilData.h"
 #include "vtkImageToImageStencil.h"
 #include "vtkImageMapper.h"
-#include "vtkActor2D.h"
+#include "vtkImageToStructuredPoints.h"
 #include "vtkLookupTable.h"
 #include "vtkPolyDataNormals.h"
 #include "vtkMarchingCubes.h"
 #include "vtkPointPicker.h"
-
-#include "exception.h"
-#include "colorScheme.h"
-#include "colorMaps.h"
-#include "histogram.h"
-#include "imageStack.h"
-#include "SliceViewer.h"
-
-#include "qwt_color_map.h"
-#include "qwt_scale_widget.h"
+#include "vtkImageAccumulate.h"
+#include "vtkImageExtractComponents.h"
+#include "vtkImageBlend.h"
+#include "vtkMarchingCubes.h"
+#include "vtkPolyDataNormals.h"
+#include "vtkImageGradientMagnitude.h"
+#include "vtkFloatArray.h"
+#include "vtkPointData.h"
+#include "vtkSmoothPolyDataFilter.h"
+#include "vtkImageGaussianSmooth.h"
+#include "vtkImageActor.h"
+#include "vtkImageMapToWindowLevelColors.h"
+#include "vtkPointPicker.h"
+#include "vtkCellArray.h"
+#include "vtkHedgeHog.h"
+#include "vtkPlane.h"
+#include "vtkSmartPointer.h"
 
 // ITK includes
-#include "itkCommand.h"
 #include "itkImage.h"
+#include "itkCommand.h"
 #include "QThreadITKFilter.hxx"
 #include "itkDiscreteGaussianImageFilter.h"
 #include "itkGradientAnisotropicDiffusionImageFilter.h"
 #include "itkCurvatureAnisotropicDiffusionImageFilter.h"
 #include "itkGradientMagnitudeImageFilter.h"
+
+// WSE includes
+#include "wseImage.hxx"
+#include "wseImageStack.hxx"
+#include "exception.h"
+#include "colorScheme.h"
+#include "colorMaps.h"
+#include "histogram.h"
+#include "SliceViewer.h"
+//#include "IsoRenderer.h"
+#include "utils.h"
+
+// QWT includes
+#include "qwt_color_map.h"
+#include "qwt_scale_widget.h"
+#include "qwt_scale_engine.h"
 
 //#include "IsoRenderer.h"
 
@@ -102,7 +129,7 @@ class wseGUI : public QMainWindow
   Q_OBJECT
   
 public:
-  typedef Image::itkFloatImage itkFloatImage;
+  typedef FloatImage::itkImageType itkImageType;
   wseGUI(QWidget *parent = 0, Qt::WFlags flags = 0);
   ~wseGUI();
   
@@ -111,7 +138,7 @@ public:
   
   void updateImageDisplay();
   bool addImageFromFile(QString fname);
-  bool addImageFromData(Image *img);
+  bool addImageFromData(FloatImage *img);
 
   static QSettings *g_settings;
 
@@ -239,7 +266,7 @@ private:
   QAction *mEditUndoMergeAction;
   
   /** The stack of image volumes in memory */
-  imageStack *mImageStack;
+  FloatImageStack *mImageStack;
 
   /** */
   int mMinHistogramBins;
@@ -248,7 +275,7 @@ private:
   int mMaxHistogramBins;
 
   /** The class that computes and stores a histogram from an ITK image */
-  Histogram<Image::itkFloatImage> *mHistogram;
+  Histogram<itkImageType> *mHistogram;
 
   bool mSmoothStepThreshold;
   QwtScaleWidget mScaleWidget;
@@ -269,7 +296,6 @@ private:
   /** This list of combo boxes is kept in sync with the master list of images from ui.imageListWidget. */
   std::vector<QComboBox *> mRegisteredSegmentationComboBoxes;
 
-  Image mThresholdImage;
   int mIsosurfaceImage;
   int mImageData;
   int mImageMask;  
@@ -354,7 +380,7 @@ protected:
   void wheelEvent(QWheelEvent *event);
 
  private:
-  itk::QThreadITKFilter<itk::ImageToImageFilter<itkFloatImage,itkFloatImage> > *mITKFilteringThread;
+  itk::QThreadITKFilter<itk::ImageToImageFilter<FloatImage::itkImageType,FloatImage::itkImageType> > *mITKFilteringThread;
 
   /** Perform Gaussian filtering on a selected image. */
   void runGaussianFiltering();

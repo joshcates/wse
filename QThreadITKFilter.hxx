@@ -5,6 +5,7 @@
 //
 #include <QThread>
 #include <QDebug>
+#include <QMutex>
 
 namespace itk {
 
