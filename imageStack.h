@@ -6,17 +6,20 @@
 
 namespace wse {
 
-/** NEEDS DOCUMENTATION */
+/** This is a convenience class for managing a stack of wse::Image
+    pointers. It includes the concept of a "currently selected" image.
+    Useful for underneath GUIs. */
 class imageStack : public QObject
 {
-Q_OBJECT
 
 public:
   imageStack() : mSelectedImage(-1) {}
   ~imageStack();
 
-  // Images
-  int numImages() { return mImages.size(); }
+  /** Returns the number of images in the stack. */
+  int numImages() const { return mImages.size(); }
+
+  /** Adds a wse::Image pointer to the stack. */
   bool addImage(Image *img) 
   {
     mImages.push_back(img); 
@@ -24,31 +27,43 @@ public:
     return true;
   }
 
+  /** Loads the image from "fname" and adds it as an wse:Image to the stack. */
   bool addImage(QString fname);
+
+  /** Removes the image with name "fname" from the stack. */
   bool removeImage(QString fname);
+
+  /** Returns the wse::Image pointer at location "i" in the stack. Returns
+      NULL pointer if no image exists. */
   Image *image(unsigned int i);
   const Image *image(unsigned int i) const;
-  QColor imageColor(unsigned int i);
-  QString name(unsigned int i);
 
-  // Selection
-  QString selectedName();
-  bool setSelectedByName(QString fname);
-  void clearSelection();
+  /** Returns the wse::Image pointer of the "selected image".  Returns
+      a NULL pointer if no image is selected.*/
   Image *selectedImage();
   const Image *selectedImage() const;
 
-  /** Returns the vtkImageImport connected to the selected image. */
+  /** Returns the image color at location "i" in the stack. */
+  QColor imageColor(unsigned int i);
+
+  /** Returns the image name at location "i" in the stack. */
+  QString name(unsigned int i);
+
+  /** Returns the name of the currently selected image. */
+  QString selectedName();
+
+  /** Sets the "selected image" to the image that matches "fname".
+      Returns true if the image name was found and false otherwise. */
+  bool setSelectedByName(QString fname);
+
+  /** Sets the "selected image" index to a null value of -1. */
+  void clearSelection()  { mSelectedImage = -1; }
+  
+    /** Returns the vtkImageImport connected to the selected image. */
   vtkImageImport *selectedImageVTK()
   {   return mImages[mSelectedImage]->vtkImporter();  }
   const vtkImageImport *selectedImageVTK() const
   {   return mImages[mSelectedImage]->vtkImporter();  }
-
-  // Processing
-  void resetFilters();
-
-signals:
-  void progressChanged(int p);
 
 private:
   /** Convert an ITK 2D image to a QImage */

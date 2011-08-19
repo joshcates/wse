@@ -42,9 +42,7 @@ bool imageStack::removeImage(QString fname)
 Image *imageStack::selectedImage()
 {
   if (mSelectedImage >= 0)
-    {
-    return mImages[mSelectedImage];
-    }
+    {    return mImages[mSelectedImage];  }
   else
     return NULL;
 }
@@ -52,9 +50,7 @@ Image *imageStack::selectedImage()
 const Image *imageStack::selectedImage() const
 {
   if (mSelectedImage >= 0)
-    {
-    return mImages[mSelectedImage];
-    }
+    {  return mImages[mSelectedImage];   }
   else
     return NULL;
 }
@@ -62,19 +58,14 @@ const Image *imageStack::selectedImage() const
 Image *imageStack::image(unsigned int i)
 {
   if (i >= 0 && i < mImages.size())
-    {
-    return mImages[i];
-    }
+    {    return mImages[i];    }
   else return NULL;
 }
 
 const Image *imageStack::image(unsigned int i) const
 {
   if (i >= 0 && i < mImages.size())
-    {
-    return mImages[i];
-
-    }
+    {    return mImages[i];    }
   else return NULL;
 }
 
@@ -87,13 +78,10 @@ QColor imageStack::imageColor(unsigned int i)
     return QColor(0,0,0);
 }
 
-
 QString imageStack::name(unsigned int i)
 {
   if (i >=0 && i < mImages.size())
-  {
-    return mImages[i]->name();
-  }
+  {    return mImages[i]->name();  }
   return QString();
 }
 
@@ -101,9 +89,7 @@ QString imageStack::name(unsigned int i)
 QString imageStack::selectedName()
 {
   if (mSelectedImage >= 0)
-  {
-    return mImages[mSelectedImage]->name();
-  }
+  {    return mImages[mSelectedImage]->name();  }
   return QString();
 }
 
@@ -111,32 +97,16 @@ QString imageStack::selectedName()
 bool imageStack::setSelectedByName(QString fname)
 {
   bool found = false;
-  //  std::cout << "name is " << fname.data() << std::endl;
+
   for (unsigned int i = 0; i < mImages.size(); i++)
   {
     if (fname.compare(mImages[i]->name())==0)
       {
-//       std::cout << "found index" << i << std::endl;
-      mSelectedImage = i;
-      found = true;
+	mSelectedImage = i;
+	found = true;
       }
   }
   return found;
 }
-
-
-void imageStack::clearSelection()
-{
-  mSelectedImage = -1;
-}
-
-
-void imageStack::resetFilters()
-{
-  //  for (unsigned int i = 0; i < mImages.size(); i++)
-  //   {
-  //   mImages[i]->resetModified();
-  //  }
-}
-
+  
 } // end namespace wse

@@ -64,7 +64,6 @@ SET( WSE_MOC_HDRS
      wse.h
      widgets.h
      histogramWidget.h
-     imageStack.h
 )
 
 SET ( WSE_HDRS
