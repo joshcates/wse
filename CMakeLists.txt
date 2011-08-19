@@ -94,6 +94,7 @@ SET(CMAKE_INCLUDE_CURRENT_DIR ON)
 SET( QT_USE_QT3SUPPORT TRUE )   
 SET( QT_USE_QTXML TRUE )
 SET( QT_USE_QTSVG TRUE )
+SET(QT_USE_QTWEBKIT TRUE)
 
 #--------------------------------------------------------------------------------
 # This sets the windows build that will need the special winmain@16 call. Qt provides

@@ -50,7 +50,7 @@ void wseGUI::runGaussianFiltering()
 
   itk::DiscreteGaussianImageFilter<itkFloatImage,itkFloatImage>::Pointer filter
     =  itk::DiscreteGaussianImageFilter<itkFloatImage,itkFloatImage>::New();
-  filter->SetInput(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->original());
+  filter->SetInput(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->itkImage());
   filter->SetVariance(ui.smoothingSigmaInputBox->value() * ui.smoothingSigmaInputBox->value());
   filter->SetUseImageSpacingOff();
   
@@ -69,7 +69,7 @@ void wseGUI::runAnisotropicFiltering()
 
   itk::GradientAnisotropicDiffusionImageFilter<itkFloatImage,itkFloatImage>::Pointer filter
     =  itk::GradientAnisotropicDiffusionImageFilter<itkFloatImage,itkFloatImage>::New();
-  filter->SetInput(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->original());
+  filter->SetInput(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->itkImage());
   filter->SetConductanceParameter(ui.conductanceSpinBox->value());
   filter->SetTimeStep(0.062);
   filter->SetNumberOfIterations(ui.iterationsSpinBox->value());
@@ -91,7 +91,7 @@ void wseGUI::runCurvatureFiltering()
 
   itk::CurvatureAnisotropicDiffusionImageFilter<itkFloatImage,itkFloatImage>::Pointer filter
     =  itk::CurvatureAnisotropicDiffusionImageFilter<itkFloatImage,itkFloatImage>::New();
-  filter->SetInput(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->original());
+  filter->SetInput(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->itkImage());
   filter->SetConductanceParameter(ui.conductanceSpinBox->value());
   filter->SetTimeStep(0.062);
   filter->SetNumberOfIterations(ui.iterationsSpinBox->value());
@@ -111,7 +111,7 @@ void wseGUI::runGradientFiltering()
 
   itk::GradientMagnitudeImageFilter<itkFloatImage, itkFloatImage>::Pointer filter = 
     itk::GradientMagnitudeImageFilter<itkFloatImage, itkFloatImage>::New();
-  filter->SetInput(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->original());
+  filter->SetInput(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->itkImage());
   filter->SetUseImageSpacingOff();
   
   // MULTITHREADING:

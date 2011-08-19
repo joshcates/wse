@@ -1,10 +1,6 @@
 #include "imageStack.h"
 
-imageStack::imageStack():
-  mSelectedImage(-1)
-{
-
-}
+namespace wse {
 
 imageStack::~imageStack()
 {
@@ -18,7 +14,7 @@ imageStack::~imageStack()
 bool imageStack::addImage(QString fname)
 {
   Image *img = new Image();
-  if (!img->load(fname))
+  if (!img->read(fname))
     return false;
   mImages.push_back(img);
 
@@ -62,45 +58,6 @@ const Image *imageStack::selectedImage() const
   else
     return NULL;
 }
-
-vtkImageImport *imageStack::selectedImageVTK(bool original)
-{
-  if (mSelectedImage >= 0)
-  {
-    //     if (original)
-       return mImages[mSelectedImage]->originalVTK();
-       //  else
-       // return mImages[mSelectedImage]->modifiedVTK();
-  }
-  return 0;
-}
-
-
-const vtkImageImport *imageStack::selectedImageVTK(bool original) const
-{
-  if (mSelectedImage >= 0)
-  {
-    //     if (original)
-       return mImages[mSelectedImage]->originalVTK();
-       // else
-       // return mImages[mSelectedImage]->modifiedVTK();
-  }
-  return 0;
-}
-
-//QImage ImageStack::ITKImageToQImage(Image::itkFloatImage::Pointer img)
-//{
-//
-// const float * pixelBuffer = img->GetBufferPointer();
-//  const int width  = img->GetBufferedRegion().GetSize()[0];
-// const int height = img->GetBufferedRegion().GetSize()[1];
-//  QRgb colorTable = NULL;
-//  const int numColors = 256;
-//  Endian bitOrder = IgnoreEndian;
-
-//  return QImage(pixelBuffer,width,height,colorTable,numColors,bitOrder);
-//}
-
 
 Image *imageStack::image(unsigned int i)
 {
@@ -181,3 +138,5 @@ void imageStack::resetFilters()
   //   mImages[i]->resetModified();
   //  }
 }
+
+} // end namespace wse

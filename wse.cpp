@@ -186,13 +186,14 @@ void wseGUI::init()
 #endif
 
   // Register image selection combo box widgets to stay in sync with file names
-  mRegisteredComboBoxes.push_back(ui.denoisingInputComboBox);
-  mRegisteredComboBoxes.push_back(ui.watershedInputComboBox);
-  mRegisteredComboBoxes.push_back(ui.gradientInputComboBox);
+  mRegisteredImageComboBoxes.push_back(ui.denoisingInputComboBox);
+  mRegisteredImageComboBoxes.push_back(ui.watershedInputComboBox);
+  mRegisteredImageComboBoxes.push_back(ui.gradientInputComboBox);
 
   // Connect multithreading slots with signals
   connect(mITKFilteringThread,SIGNAL(finished()),this,SLOT(mITKFilteringThread_finished()));
   connect(mITKFilteringThread,SIGNAL(started()),this,SLOT(mITKFilteringThread_started()));
+
 }
 
 void wseApplication::loadStyleSheet(const char *fn)
@@ -208,7 +209,12 @@ void wseApplication::loadStyleSheet(const char *fn)
 
 void wseGUI::setupUI() 
 {
-  // ui.dataDockWidget->setWindowFlags(Qt::Drawer);
+  // Set up the browser
+  ui.browserWindow->load(QUrl("http://www.sci.utah.edu/~cates/wse"));
+  ui.consoleDockWidget->show(); // force a raise of this widget on start
+  //  ui.browserWindow->show();
+  //  ui.browserDockWidget->setWindowFlags(Qt::Drawer|Qt::RightDockWidgetArea);
+  //  ui.browserDockWidget->show();
 
   // set up the isosurface renderer first
   // mIsoRenderer = new IsoRenderer();
@@ -223,65 +229,77 @@ void wseGUI::setupUI()
   ui.vtkRenderWidget->GetInteractor()->SetPicker(mPointPicker);
 
   // Toolbar
-  mImportAction = new QAction(QIcon(":/WSE/Resources/import.png"), tr("&Load Volume"), this);
-  mImportAction->setToolTip(tr("Load an image volume"));
-  mImportAction->setStatusTip(tr("Load an image volume"));
-  mImportAction->setCheckable(true);
-  connect(mImportAction, SIGNAL(triggered()), this, SLOT(on_addButton_released()));
-  
+  // mImportAction = new QAction(QIcon(":/WSE/Resources/import.png"), tr("&Load Volume"), this);
+  // mImportAction->setToolTip(tr("Load an image volume"));
+  // mImportAction->setStatusTip(tr("Load an image volume"));
+  // mImportAction->setCheckable(true);
+  // connect(mImportAction, SIGNAL(triggered()), this, SLOT(on_addButton_released()));
+
   // mExportAction = new QAction(QIcon(":/WSE/Resources/export.png"), tr("&Export"), this);
   // mExportAction->setToolTip(tr("Export"));
   // mExportAction->setStatusTip(tr("Export model"));
   // mExportAction->setCheckable(true);
 
-  QActionGroup *toolBarGroup = new QActionGroup(this);
-  toolBarGroup->addAction(mImportAction);
+  //  QActionGroup *toolBarGroup = new QActionGroup(this);
+  //  toolBarGroup->addAction(mImportAction);
   // toolBarGroup->addAction(mExportAction);
-  mImportAction->setChecked(false);
+  //  mImportAction->setChecked(false);
   // mExportAction->setEnabled(false);
 
   // ui.mainToolBar->addAction(mImportAction);
   // ui.mainToolBar->addAction(mExportAction);
 
-  ui.mainToolBar->addAction(mImportAction);
+  //  ui.mainToolBar->addAction(mImportAction);
   ui.mainToolBar->setIconSize(QSize(30,30));
 
   // HIDE TOOLBAR FOR NOW
   ui.mainToolBar->hide();
   ui.mainToolBar->setEnabled(false);
   
-  // Menubar
+  // Menubar -- Set up the actions, connect to slots, and create the menu
+
+  // Load volume action
   mImportImageAction = new QAction(tr("Load Volume"), this);
   mImportImageAction->setShortcut(tr("Load image volumes from file"));
-  //  mExportColormapAction = new QAction(tr("Export Colormap"), this);
-  //  mExportColormapAction->setShortcut(tr("Export selected colormaps"));
-  //mExportColormapAction->setEnabled(false);
+  connect(mImportImageAction, SIGNAL(triggered()),this,SLOT(on_addButton_released()));
+
+  // Save volume action
+  mExportImageAction = new QAction(tr("Save Volume"), this);
+  connect(mExportImageAction, SIGNAL(triggered()),this,SLOT(unimplemented()));
+ 
+  // mExportColormapAction = new QAction(tr("Export Colormap"), this);
+  // mExportColormapAction->setShortcut(tr("Export selected colormaps"));
+  // mExportColormapAction->setEnabled(false);
+  // connect(mExportColormapAction, SIGNAL(triggered()), this, SLOT(exportImage()));
+
+  // Exit program action
   QAction *exitAction = new QAction(tr("E&xit"), this);
   exitAction->setShortcut(tr("Ctrl+Q"));
   exitAction->setStatusTip(tr("Exit the application"));
-
-  connect(mImportImageAction, SIGNAL(triggered()),this,SLOT(on_addButton_released()));
-  //  connect(mExportColormapAction, SIGNAL(triggered()), this, SLOT(exportImage()));
   connect(exitAction, SIGNAL(triggered()), qApp, SLOT(closeAllWindows()));
 
+  // Full screen action
   mFullScreenAction = new QAction(tr("&Full Screen"), this);
   mFullScreenAction->setShortcut(tr("Ctrl+F"));
   mFullScreenAction->setCheckable(true);
-
   connect(mFullScreenAction, SIGNAL(triggered()), this, SLOT(toggleFullScreen()));
 
+  // Normal view action
   mNormalView = new QAction(tr("Go to &Normal View"), this);
   mNormalView->setShortcut((tr("Ctrl+1")));
   connect(mNormalView, SIGNAL(triggered()), this, SLOT(setNormalView()));
 
+  // Dual view action
   mDualView = new QAction(tr("Go to &Dual View"), this);
   mDualView->setShortcut((tr("Ctrl+2")));
   connect(mDualView, SIGNAL(triggered()), this, SLOT(setDualView()));
 
+  // Slice view action
   mSliceView = new QAction(tr("Go to &Slice View"), this);
   mSliceView->setShortcut((tr("Ctrl+3")));
   connect(mSliceView, SIGNAL(triggered()), this, SLOT(setSliceView()));
 
+  // Isosurface action
   mIsoSurfaceView = new QAction(tr("Go to &IsoSurface View"), this);
   mIsoSurfaceView->setShortcut((tr("Ctrl+4")));
   connect(mIsoSurfaceView, SIGNAL(triggered()), this, SLOT(setIsoSurfaceView()));
@@ -296,15 +314,19 @@ void wseGUI::setupUI()
   // mTogglePercentageShownAction->setCheckable(true);
   // connect(mTogglePercentageShownAction, SIGNAL(triggered()), this, SLOT(togglePercentageShown()));
 
-
+  // Preferences action
   QAction *prefAction = new QAction(tr("&Preferences..."),this);
   prefAction->setStatusTip(tr("Set program preferences"));
   //  connect(prefAction,SIGNAL(triggered()), mPreferencesWindow,SLOT(exec()));  
 
+  // Construct file menu
   QMenu *fileMenu = ui.menuBar->addMenu(tr("&File"));
   fileMenu->addAction(mImportImageAction);
+  fileMenu->addAction(mExportImageAction);
   fileMenu->addAction(prefAction);
   fileMenu->addAction(exitAction);
+
+  
 
   // QMenu *toolsMenu = ui.menuBar->addMenu(tr("&Tools"));
   // toolsMenu->addAction(mImportAction);
@@ -443,8 +465,8 @@ void wseGUI::setupUI()
   // assert(success);
 
 
-  mThresholdTimer.setSingleShot(true);
-  connect(&mThresholdTimer, SIGNAL(timeout()), this, SLOT(thresholdTimerEvent()));
+  //  mThresholdTimer.setSingleShot(true);
+  //  connect(&mThresholdTimer, SIGNAL(timeout()), this, SLOT(thresholdTimerEvent()));
 
   // the scalar schemes
   // std::vector<ScalarMethod> scalarMethods = ScalarMethod::getScalarMethods();
@@ -517,22 +539,40 @@ void wseGUI::numBinsSpinnerChanged(int n)
 }
   
   
-void wseGUI::populateImageDataComboBoxes()
+void wseGUI::syncRegisteredImageComboBoxes()
 {
   // Loop through all registered combo boxes (those in a member variable list)
-  for (unsigned int j = 0; j < mRegisteredComboBoxes.size(); j++)
+  for (unsigned int j = 0; j < mRegisteredImageComboBoxes.size(); j++)
     {
       // Clear all entries
-      mRegisteredComboBoxes[j]->clear();
+      mRegisteredImageComboBoxes[j]->clear();
+
       // Populate with the names in the image list widget
       for (int i=0; i<ui.imageListWidget->count(); i++)
 	{
-	  mRegisteredComboBoxes[j]->addItem(ui.imageListWidget->item(i)->text());
+	  mRegisteredImageComboBoxes[j]->addItem(ui.imageListWidget->item(i)->text());
+	}
+      //      mRegisteredImageComboBoxes[j].setCurrentIndex(0);
+    }
+}
+  
+void wseGUI::syncRegisteredSegmentationComboBoxes()
+{
+  // Loop through all registered combo boxes (those in a member variable list)
+  for (unsigned int j = 0; j < mRegisteredSegmentationComboBoxes.size(); j++)
+    {
+      // Clear all entries
+      mRegisteredSegmentationComboBoxes[j]->clear();
+      // Populate with the names in the segmentation list widget
+      for (int i=0; i< ui.segmentationListWidget->count(); i++)
+	{
+	  mRegisteredSegmentationComboBoxes[j]->addItem(ui.segmentationListWidget->item(i)->text());
 	}
       //      mRegisteredComboBoxes[j].setCurrentIndex(0);
     }
 }
   
+
 
 /**
   Update the icons in the image list for the "image data" and "mask"
@@ -702,7 +742,7 @@ void wseGUI::readSettings()
 
   // Restore window geometry
   if (g_settings->contains("window_geometry"))
-   restoreGeometry(g_settings->value("window_geometry").toByteArray());
+    restoreGeometry(g_settings->value("window_geometry").toByteArray());
 
   // Restore window state (including dock states)
   if (g_settings->contains("window_state"))
@@ -776,12 +816,12 @@ void wseGUI::updateImageDisplay() {
       mSliceViewer->SetImageMask(NULL);
       
       Image *image = mImageStack->image(mImageData);
-      vtkImageImport *imageImport = image->originalVTK();
+      vtkImageImport *imageImport = image->vtkImporter();
       mSliceViewer->SetInputConnection(imageImport->GetOutputPort());
       
       // Add the mask as an overlay to the image view window
       if (mImageMask != -1) {
-	mSliceViewer->SetImageMask(mImageStack->image(mImageMask)->originalVTK()->GetOutputPort());
+	mSliceViewer->SetImageMask(mImageStack->image(mImageMask)->vtkImporter()->GetOutputPort());
       }
       
       mSliceViewer->Render();
@@ -895,7 +935,7 @@ void wseGUI::importDelete()
     }
   updateImageDisplay();
   
-  this->populateImageDataComboBoxes();
+  this->syncRegisteredImageComboBoxes();
 }
 
 
@@ -913,7 +953,7 @@ bool wseGUI::addImageFromData(Image *img)
     item->setText(mImageStack->selectedName());
     ui.imageListWidget->insertItem(ui.imageListWidget->count(), item);
     ui.imageListWidget->setCurrentRow(ui.imageListWidget->count()-1);
-    ui.setIsosurfaceButton->setEnabled(true);
+    //    ui.setIsosurfaceButton->setEnabled(true);
     //    ui.setImageMaskButton->setEnabled(true);
     ui.setImageDataButton->setEnabled(true);
     //    mExportAction->setEnabled(true);
@@ -926,7 +966,7 @@ bool wseGUI::addImageFromData(Image *img)
     return ret;
     
   }
-  this->populateImageDataComboBoxes();
+  this->syncRegisteredImageComboBoxes();
 
   return true;
 }
@@ -943,7 +983,7 @@ bool wseGUI::addImageFromFile(QString fname)
     item->setText(mImageStack->selectedName());
     ui.imageListWidget->insertItem(ui.imageListWidget->count(), item);
     ui.imageListWidget->setCurrentRow(ui.imageListWidget->count()-1);
-    ui.setIsosurfaceButton->setEnabled(true);
+    //    ui.setIsosurfaceButton->setEnabled(true);
     //    ui.setImageMaskButton->setEnabled(true);
     ui.setImageDataButton->setEnabled(true);
     //    mExportAction->setEnabled(true);
@@ -961,7 +1001,7 @@ bool wseGUI::addImageFromFile(QString fname)
   QString path = fi.canonicalPath();
   if (!path.isNull()) {  g_settings->setValue("import_path", path); }
   
-  this->populateImageDataComboBoxes();
+  this->syncRegisteredImageComboBoxes();
   return true;
 }
 
@@ -1080,11 +1120,11 @@ void wseGUI::updateHistogram() {
   
   delete mHistogram;
 
-  Image::itkFloatImage::Pointer image = mImageStack->image(mImageData)->original();
+  Image::itkFloatImage::Pointer image = mImageStack->image(mImageData)->itkImage();
   Image::itkFloatImage::Pointer mask(NULL);
 
   if (mImageMask >= 0) {
-    mask = mImageStack->image(mImageMask)->original();
+    mask = mImageStack->image(mImageMask)->itkImage();
     mHistogram = new Histogram<Image::itkFloatImage>(image, mask, numBins);
   } else {
     mHistogram = new Histogram<Image::itkFloatImage>(image, numBins);
@@ -1105,9 +1145,10 @@ void wseGUI::updateHistogram() {
   updateHistogramBars();
   updateHistogramWidget();
 
-  if (mMarkers.size() > 0) {
-    setThresholdToIntensity(mMarkers[0]);
-  }
+  //  if (mMarkers.size() > 0) 
+  // {
+  //  setThresholdToIntensity(mMarkers[0]);
+  // }
 }
 
 void wseGUI::updateHistogramBars() {
@@ -1167,36 +1208,35 @@ void wseGUI::updateHistogramWidget() {
     points.push_back(mPoints[i]);
   }
 
-  for (unsigned int i = 0; i < mMarkers.size(); i++) {
-    markers.push_back(mMarkers[i]);
-  }
+  //  for (unsigned int i = 0; i < mMarkers.size(); i++) {
+  //    markers.push_back(mMarkers[i]);
+  //  }
   
   ui.histogramSlider_1->setHistogram(points, markers, mHistogram->min(), mHistogram->max());
   ui.histogramSlider_1->update();
 }
 
 
-void wseGUI::thresholdChanged(double lower, double upper) {
-
-  if (mHistogram == NULL) {
-    return;
-  }
+void wseGUI::thresholdChanged(double lower, double upper) 
+{
+  
+  if (mHistogram == NULL) 
+    {
+      return;
+    }
   float min = mHistogram->min();
   float max = mHistogram->max();
-
-//  fprintf (stderr, "min = %f, max = %f\n", m, m2);
+  
   mThresholdLower = (max-min) * lower + min;
   mThresholdUpper = (max-min) * upper + min;
   
-//  fprintf (stderr, "threshold is now %G percent, value:%G\n", val,threshold);
   mSliceViewer->SetThreshold(mThresholdLower, mThresholdUpper);
   mSliceViewer->Render();
   //  mIsoRenderer->setThreshold(mThresholdLower, mThresholdUpper);
-
-  mThresholdTimer.stop();
-  mThresholdTimer.start(100);
+  
+  //  mThresholdTimer.stop();
+  //  mThresholdTimer.start(100);
 }
-
 
 void wseGUI::on_showMaskCheckBox_stateChanged(int state)
 {
@@ -1236,12 +1276,12 @@ void wseGUI::on_clipThresholdCheckBox_stateChanged(int state)
   this->mSliceViewer->Render();
 }
 
-void wseGUI::thresholdTimerEvent() {
+//void wseGUI::thresholdTimerEvent() {
   // mIsoRenderer->updateIsoScalars();
-  updateColorMap();
+//  updateColorMap();
   // redrawIsoSurface();
-  reportThreshold();
-}
+//  reportThreshold();
+//}
 
 
 void wseGUI::on_showNormalsCheckBox_stateChanged(int state) {
@@ -1294,17 +1334,18 @@ void wseGUI::on_clipIsoSurfaceComboBox_currentIndexChanged( int index ) {
 
 
 
-void wseGUI::toggleFullScreen() {
-  if (mFullScreen) {
-    showNormal();
-  } else {
-    showFullScreen();
-  } 
+void wseGUI::toggleFullScreen() 
+{
+  if (mFullScreen) 
+    {
+      showNormal();
+    } else 
+    {
+      showFullScreen();
+    } 
   mFullScreen = !mFullScreen;
   mFullScreenAction->setChecked(mFullScreen);
 }
-
-
 
 void wseGUI::setDualView()
 {
@@ -1385,8 +1426,6 @@ void wseGUI::setIsoSurfaceView()
   ui.viewSplitter->setSizes(viewSizes);
 }
 
-
-
 void wseGUI::on_endoSurfaceComboBox_currentIndexChanged( int index )
 {
   // mIsoRenderer->setRenderMethods(ui.wallSurfaceComboBox->currentText().toStdString(), 
@@ -1401,22 +1440,25 @@ void wseGUI::on_wallSurfaceComboBox_currentIndexChanged( int index )
   // redrawIsoSurface();
 }
 
-
-
 void wseGUI::on_scalarSurfaceComboBox_currentIndexChanged( int index )
 {
-  if (index == 0) {
-    // mIsoRenderer->setScalarOnWall(true);
-    if (ui.wallSurfaceComboBox->currentIndex() == ISO_NOT_SHOWN) {
-      ui.wallSurfaceComboBox->setCurrentIndex(ISO_SURFACE);
+  if (index == 0) 
+    {
+      // mIsoRenderer->setScalarOnWall(true);
+      if (ui.wallSurfaceComboBox->currentIndex() == ISO_NOT_SHOWN) 
+	{
+	  ui.wallSurfaceComboBox->setCurrentIndex(ISO_SURFACE);
+	}
+    } 
+  else 
+    {
+      // mIsoRenderer->setScalarOnWall(false);
+      ui.wallSurfaceComboBox->setCurrentIndex(ISO_NOT_SHOWN);
+      if (ui.endoSurfaceComboBox->currentIndex() == ISO_NOT_SHOWN) 
+	{
+	  ui.endoSurfaceComboBox->setCurrentIndex(ISO_SURFACE);
+	}
     }
-  } else {
-    // mIsoRenderer->setScalarOnWall(false);
-    ui.wallSurfaceComboBox->setCurrentIndex(ISO_NOT_SHOWN);
-    if (ui.endoSurfaceComboBox->currentIndex() == ISO_NOT_SHOWN) {
-      ui.endoSurfaceComboBox->setCurrentIndex(ISO_SURFACE);
-    }
-  }
   visualizePage();
   // redrawIsoSurface();
 }
@@ -1438,172 +1480,132 @@ void wseGUI::on_maskInterpolationComboBox_currentIndexChanged( int index )
   //redrawIsoSurface();
 }
 
+// void wseGUI::setThresholdToIntensity( double value ) 
+// {
+//   float min = mHistogram->min();
+//   float max = mHistogram->max();
 
-void wseGUI::setThresholdToIntensity( double value ) {
+//   float lowerThreshold = (value - min) / (max-min);
+//   float upperThreshold = 100.0f;
+  
+//   ui.histogramSlider_1->setLowerThreshold(lowerThreshold);
+//   ui.histogramSlider_1->setUpperThreshold(upperThreshold);
+//   thresholdChanged(ui.histogramSlider_1->getLowerThreshold(), ui.histogramSlider_1->getUpperThreshold());
+//   reportThreshold();
+// }
 
-  float min = mHistogram->min();
-  float max = mHistogram->max();
+// void wseGUI::setThresholdToIntensity( double lower, double upper )
+// {
+//   if (lower == mThresholdLower && upper == mThresholdUpper) 
+//     { return;  }
+  
+//   float min = mHistogram->min();
+//   float max = mHistogram->max();
 
-  float lowerThreshold = (value - min) / (max-min);
-  float upperThreshold = 100.0f;
+//   float lowerThreshold = (lower - min) / (max-min);
+//   float upperThreshold = (upper - min) / (max-min);
 
-  ui.histogramSlider_1->setLowerThreshold(lowerThreshold);
-  ui.histogramSlider_1->setUpperThreshold(upperThreshold);
-  thresholdChanged(ui.histogramSlider_1->getLowerThreshold(), ui.histogramSlider_1->getUpperThreshold());
-  reportThreshold();
-}
+//   ui.histogramSlider_1->setLowerThreshold(lowerThreshold);
+//   ui.histogramSlider_1->setUpperThreshold(upperThreshold);
+//   thresholdChanged(ui.histogramSlider_1->getLowerThreshold(), ui.histogramSlider_1->getUpperThreshold());
+//   reportThreshold();
+// }
 
-void wseGUI::setThresholdToIntensity( double lower, double upper )
+
+void wseGUI::showStatusMessage( const QString &text, int timeout /*= 0*/ ) 
 {
-  if (lower == mThresholdLower && upper == mThresholdUpper) {
-    return;
-  }
-
-  float min = mHistogram->min();
-  float max = mHistogram->max();
-
-  float lowerThreshold = (lower - min) / (max-min);
-  float upperThreshold = (upper - min) / (max-min);
-
-  ui.histogramSlider_1->setLowerThreshold(lowerThreshold);
-  ui.histogramSlider_1->setUpperThreshold(upperThreshold);
-  thresholdChanged(ui.histogramSlider_1->getLowerThreshold(), ui.histogramSlider_1->getUpperThreshold());
-  reportThreshold();
-}
-
-
-//void wseGUI::snapToFibrosisMarker( unsigned int num ) {
-//   if (mMarkers.size() > num) {
-
-//     std::stringstream ss;
-//     ss << "Threshold set to intensity " << mMarkers[num] << " (" << 
-//       std::fixed << std::setprecision(2) << mPercentages[num]*100 << "% of masked pixels)";
-
-//     showStatusMessage(tr(ss.str().c_str()), 25000);
-
-//     setThresholdToIntensity(mMarkers[num]);
-//   }
-//}
-
-
-
-void wseGUI::reportThreshold()
-{
-
-  // if (mImageData == -1 || mImageMask == -1) {
-  //   return;
-  // }
-
- 
-  // float percentage = computePercentForIntensity(mThresholdLower, mThresholdUpper);
-
-  // std::stringstream ss;
-  // ss << "Threshold set to (" << mThresholdLower << ", " << mThresholdUpper << ") - " 
-  //   << std::fixed << std::setprecision(2) << percentage << "% of masked pixels";
-
-  // std::stringstream percentage_string;
-  // percentage_string << std::fixed << std::setprecision(2) << percentage << "%";
-
-  // mPercentageString = QString(percentage_string.str().c_str());
-
-  // ui.lowerThresholdSpinBox->setValue(mThresholdLower);
-  // ui.upperThresholdSpinBox->setValue(mThresholdUpper);
-
-  // updatePercentageDisplay();
-
-  // //showStatusMessage(tr(ss.str().c_str()), 25000);
-}
-
-void wseGUI::showStatusMessage( const QString &text, int timeout /*= 0*/ ) {
-  std::cerr << text.toStdString() << std::endl;
+  //  std::cerr << text.toStdString() << std::endl;
   ui.statusBar->showMessage(text, timeout);
 }
 
-
-
-void wseGUI::colorMapChanged( int m ) {
+void wseGUI::colorMapChanged( int m ) 
+{
   mCurrentColorMap = m;
   updateColorMap();
 }
 
-void wseGUI::updateColorMap() {
-
- //  double numSteps = 5;
-
-//   double minValue, maxValue;
-// double scalarMax = mIsoRenderer->getScalarMax();
-// double scalarMin = mIsoRenderer->getScalarMin();
-
-//   if (ui.histogramColorScaleCheckBox->isChecked()) {
-//     minValue = mHistogram->min();
-//     maxValue = mHistogram->max();
-//   } else {
-//     minValue = scalarMin;
-//     maxValue = scalarMax;
-//   }
-
-//   QwtDoubleInterval range(minValue, maxValue);
-//   QwtLinearScaleEngine scaleEngine;
-
-//   double stepSize = range.width() / numSteps;
-
-// //  scaleEngine.autoScale(10,minValue,maxValue,stepSize);
-//   QwtScaleDiv scaleDiv = scaleEngine.divideScale(minValue, maxValue, numSteps, 5, stepSize);
-
-//   colorMap map = mColorMaps[mCurrentColorMap];
-//   int numColors = map.colors.size();
-
-//   mColorMap.setColorInterval(map.colors[0], map.colors[numColors-1]);
-
-//   if (ui.snapColorsToBarsCheckBox->isChecked()) {
-//     for (int i = 0; i < mMarkers.size(); i++) {
-//       double ratio = (mMarkers[i] - minValue) / (maxValue - minValue);
-//       if (i+1 < map.colors.size()) {
-//         mColorMap.addColorStop(ratio, map.colors[i+1]);
-//       }
-//     }
-//   } else {
-//     double width = 1.0 / (numColors-1);
-//     for (int i = 1; i < numColors-1; i++) {
-//       mColorMap.addColorStop(i*width, map.colors[i]);
-//     }
-//   }
-
-//   //mColorMap.addColorStop(0.75, Qt::yellow);
-//   mScaleWidget.setColorBarEnabled(true);
-//   mScaleWidget.setColorMap(range, mColorMap);
-
-//   mScaleWidget.setScaleDiv(scaleEngine.transformation(), scaleDiv);
-
-//   vtkLookupTable *lut = mIsoRenderer->getLookupTable();
-
-//   lut->SetTableValue(0,0.4f,0.4f,0.4f,1.0f);
-//   // AKM: For the grey non-threshold pictures
-//   //lut->SetTableValue(1,0.25f,0.25f,0.25f,1.0f);
-
-//   // AKM: For the grey non-threshold pictures
-//   //for (int i = 2; i < 1000; i++ ) {
-//   for (int i = 0; i < 1000; i++ ) {
-//     double value = (i / 1000.0) * (scalarMax - scalarMin) + scalarMin;
-//     QRgb rgb = mColorMap.rgb(range, value);
-//     lut->SetTableValue(i+1, qRed(rgb)/255.0, qGreen(rgb)/255.0, qBlue(rgb)/255.0, 1.0f);
-//   }
+void wseGUI::updateColorMap() 
+{
   
+  //  double numSteps = 5;
+  
+  //   double minValue, maxValue;
+  // double scalarMax = mIsoRenderer->getScalarMax();
+  // double scalarMin = mIsoRenderer->getScalarMin();
+  
+  //   if (ui.histogramColorScaleCheckBox->isChecked()) {
+  //     minValue = mHistogram->min();
+  //     maxValue = mHistogram->max();
+  //   } else {
+  //     minValue = scalarMin;
+  //     maxValue = scalarMax;
+  //   }
+  
+  //   QwtDoubleInterval range(minValue, maxValue);
+  //   QwtLinearScaleEngine scaleEngine;
+  
+  //   double stepSize = range.width() / numSteps;
+  
+  // //  scaleEngine.autoScale(10,minValue,maxValue,stepSize);
+  //   QwtScaleDiv scaleDiv = scaleEngine.divideScale(minValue, maxValue, numSteps, 5, stepSize);
+  
+  //   colorMap map = mColorMaps[mCurrentColorMap];
+  //   int numColors = map.colors.size();
+  
+  //   mColorMap.setColorInterval(map.colors[0], map.colors[numColors-1]);
+  
+  //   if (ui.snapColorsToBarsCheckBox->isChecked()) {
+  //     for (int i = 0; i < mMarkers.size(); i++) {
+  //       double ratio = (mMarkers[i] - minValue) / (maxValue - minValue);
+  //       if (i+1 < map.colors.size()) {
+  //         mColorMap.addColorStop(ratio, map.colors[i+1]);
+  //       }
+  //     }
+  //   } else {
+  //     double width = 1.0 / (numColors-1);
+  //     for (int i = 1; i < numColors-1; i++) {
+  //       mColorMap.addColorStop(i*width, map.colors[i]);
+  //     }
+  //   }
+  
+  //   //mColorMap.addColorStop(0.75, Qt::yellow);
+  //   mScaleWidget.setColorBarEnabled(true);
+  //   mScaleWidget.setColorMap(range, mColorMap);
+  
+  //   mScaleWidget.setScaleDiv(scaleEngine.transformation(), scaleDiv);
+  
+  //   vtkLookupTable *lut = mIsoRenderer->getLookupTable();
+  
+  //   lut->SetTableValue(0,0.4f,0.4f,0.4f,1.0f);
+  //   // AKM: For the grey non-threshold pictures
+  //   //lut->SetTableValue(1,0.25f,0.25f,0.25f,1.0f);
+  
+  //   // AKM: For the grey non-threshold pictures
+  //   //for (int i = 2; i < 1000; i++ ) {
+  //   for (int i = 0; i < 1000; i++ ) {
+  //     double value = (i / 1000.0) * (scalarMax - scalarMin) + scalarMin;
+  //     QRgb rgb = mColorMap.rgb(range, value);
+  //     lut->SetTableValue(i+1, qRed(rgb)/255.0, qGreen(rgb)/255.0, qBlue(rgb)/255.0, 1.0f);
+  //   }
+  
+  
+  //   redrawIsoSurface();
+}
 
-//   redrawIsoSurface();
- }
-
-void wseGUI::on_histogramBarsComboBox_currentIndexChanged( int index ) {
+void wseGUI::on_histogramBarsComboBox_currentIndexChanged( int index ) 
+{
   updateHistogramBars();
   updateHistogramWidget();
   updateColorMap();
 }
 
-void wseGUI::on_histogramColorScaleCheckBox_stateChanged( int ) {
+void wseGUI::on_histogramColorScaleCheckBox_stateChanged( int ) 
+{
   updateColorMap();
 }
 
-void wseGUI::on_snapColorsToBarsCheckBox_stateChanged( int ) {
+void wseGUI::on_snapColorsToBarsCheckBox_stateChanged( int ) 
+{
   updateColorMap();
 }
 
@@ -1696,7 +1698,6 @@ void wseGUI::pointPick()
   std::cerr << "Pick: slice: " << slice << "\n";
   ui.sliceSelector->setValue(slice);
 
-
   const int length = 3;
   double x = pickPosition[0];
   double y = pickPosition[1];
@@ -1723,10 +1724,11 @@ void wseGUI::pointPick()
   colors->SetName("Colors");
   colors->SetNumberOfComponents(3);
   colors->SetNumberOfTuples(5);
-  for (int i = 0; i < 5 ;i++) {
-    colors->InsertTuple3(i, 255, 255, 0);
-  }
-
+  for (int i = 0; i < 5 ;i++) 
+    {
+      colors->InsertTuple3(i, 255, 255, 0);
+    }
+  
   vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
   polyData->SetPoints(points);
   polyData->SetLines(lines);
@@ -1858,13 +1860,16 @@ void wseGUI::pointPick()
 
 void wseGUI::updatePercentageDisplay()
 {
-  if (mPercentageShown) {
-    ui.percentageLineEdit->setEnabled(true);
-    ui.percentageLineEdit->setText(mPercentageString);
-  } else {
-    ui.percentageLineEdit->setEnabled(false);
-    ui.percentageLineEdit->setText("Show with " + QString(QKeySequence(Qt::CTRL + Qt::Key_S)));
-  }
+  if (mPercentageShown) 
+    {
+      ui.percentageLineEdit->setEnabled(true);
+      ui.percentageLineEdit->setText(mPercentageString);
+    } 
+  else 
+    {
+      ui.percentageLineEdit->setEnabled(false);
+      ui.percentageLineEdit->setText("Show with " + QString(QKeySequence(Qt::CTRL + Qt::Key_S)));
+    }
 }
 
 void wseGUI::on_gaussianRadioButton_toggled(bool on)

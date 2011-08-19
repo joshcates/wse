@@ -225,68 +225,6 @@
             </property>
            </widget>
           </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_4">
-            <item>
-             <layout class="QGridLayout" name="gridLayout_3">
-              <item row="1" column="0">
-               <widget class="QLabel" name="label_9">
-                <property name="text">
-                 <string>Lower Threshold:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="2">
-               <widget class="QLabel" name="label_10">
-                <property name="text">
-                 <string>Upper Threshold:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="4">
-               <widget class="QLabel" name="label_12">
-                <property name="text">
-                 <string>Percent:</string>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="5">
-               <widget class="QLineEdit" name="percentageLineEdit">
-                <property name="text">
-                 <string/>
-                </property>
-                <property name="alignment">
-                 <set>Qt::AlignCenter</set>
-                </property>
-                <property name="readOnly">
-                 <bool>true</bool>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="1">
-               <widget class="QDoubleSpinBox" name="lowerThresholdSpinBox">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-               </widget>
-              </item>
-              <item row="1" column="3">
-               <widget class="QDoubleSpinBox" name="upperThresholdSpinBox">
-                <property name="sizePolicy">
-                 <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                  <horstretch>0</horstretch>
-                  <verstretch>0</verstretch>
-                 </sizepolicy>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </item>
          </layout>
         </item>
         <item>
@@ -321,7 +259,7 @@
   <widget class="QStatusBar" name="statusBar"/>
   <widget class="QDockWidget" name="dataDockWidget">
    <property name="windowTitle">
-    <string>Data</string>
+    <string>Data Manager</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>1</number>
@@ -342,7 +280,7 @@
          <height>0</height>
         </size>
        </property>
-       <layout class="QVBoxLayout" name="verticalLayout_5">
+       <layout class="QVBoxLayout" name="verticalLayout_28">
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_2">
           <item>
@@ -454,22 +392,59 @@
          </layout>
         </item>
         <item>
-         <widget class="QImageList" name="imageListWidget">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
+         <widget class="QGroupBox" name="groupBox_2">
+          <property name="title">
+           <string>Image Data</string>
           </property>
-          <property name="minimumSize">
-           <size>
-            <width>100</width>
-            <height>60</height>
-           </size>
+          <layout class="QVBoxLayout" name="verticalLayout_5">
+           <item>
+            <widget class="QImageList" name="imageListWidget">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>100</width>
+               <height>60</height>
+              </size>
+             </property>
+             <property name="lineWidth">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </widget>
+        </item>
+        <item>
+         <widget class="QGroupBox" name="groupBox_5">
+          <property name="title">
+           <string>Segmentation Data</string>
           </property>
-          <property name="lineWidth">
-           <number>2</number>
-          </property>
+          <layout class="QVBoxLayout" name="verticalLayout_27">
+           <item>
+            <widget class="QImageList" name="segmentationListWidget">
+             <property name="sizePolicy">
+              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+               <horstretch>0</horstretch>
+               <verstretch>0</verstretch>
+              </sizepolicy>
+             </property>
+             <property name="minimumSize">
+              <size>
+               <width>100</width>
+               <height>60</height>
+              </size>
+             </property>
+             <property name="lineWidth">
+              <number>2</number>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </widget>
         </item>
        </layout>
@@ -479,11 +454,17 @@
    </widget>
   </widget>
   <widget class="QDockWidget" name="controlsDockWidget">
+   <property name="floating">
+    <bool>false</bool>
+   </property>
+   <property name="features">
+    <set>QDockWidget::DockWidgetFeatureMask</set>
+   </property>
    <property name="windowTitle">
     <string>Processing</string>
    </property>
    <attribute name="dockWidgetArea">
-    <number>1</number>
+    <number>2</number>
    </attribute>
    <widget class="QWidget" name="dockWidgetContents_2">
     <layout class="QVBoxLayout" name="verticalLayout_13">
@@ -515,7 +496,7 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>386</width>
+          <width>410</width>
           <height>846</height>
          </rect>
         </property>
@@ -1172,7 +1153,7 @@
     </size>
    </property>
    <property name="windowTitle">
-    <string>Watersheds</string>
+    <string>Watershed Segmentation Module</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
@@ -1210,19 +1191,19 @@
             </size>
            </property>
            <property name="currentIndex">
-            <number>1</number>
+            <number>2</number>
            </property>
            <widget class="QWidget" name="smoothingTab">
             <property name="geometry">
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>341</width>
-              <height>470</height>
+              <width>406</width>
+              <height>359</height>
              </rect>
             </property>
             <attribute name="label">
-             <string>Denoising</string>
+             <string>1. Denoise the Image Data</string>
             </attribute>
             <layout class="QVBoxLayout" name="verticalLayout_25">
              <item>
@@ -1410,12 +1391,12 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>331</width>
-              <height>485</height>
+              <width>421</width>
+              <height>133</height>
              </rect>
             </property>
             <attribute name="label">
-             <string>Gradient Magnitude</string>
+             <string>2. Compute a Gradient Magnitude Image</string>
             </attribute>
             <layout class="QVBoxLayout" name="verticalLayout_22">
              <item>
@@ -1448,12 +1429,12 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>331</width>
-              <height>485</height>
+              <width>406</width>
+              <height>280</height>
              </rect>
             </property>
             <attribute name="label">
-             <string>Watershed Transform</string>
+             <string>3. Compute the Watershed Transform</string>
             </attribute>
             <layout class="QVBoxLayout" name="verticalLayout_21">
              <item>
@@ -1467,37 +1448,36 @@
               </widget>
              </item>
              <item>
-              <widget class="QSlider" name="lowerThresholdSlider_2">
-               <property name="maximum">
-                <number>100</number>
-               </property>
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="tickPosition">
-                <enum>QSlider::TicksBelow</enum>
-               </property>
-               <property name="tickInterval">
-                <number>5</number>
+              <widget class="QLabel" name="label_9">
+               <property name="text">
+                <string>Lower Threshold:</string>
                </property>
               </widget>
              </item>
              <item>
-              <widget class="QSlider" name="upperThresholdSlider_2">
-               <property name="maximum">
-                <number>100</number>
+              <widget class="QDoubleSpinBox" name="lowerThresholdSpinBox">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
                </property>
-               <property name="value">
-                <number>100</number>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_10">
+               <property name="text">
+                <string>Upper Threshold:</string>
                </property>
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-               <property name="tickPosition">
-                <enum>QSlider::TicksAbove</enum>
-               </property>
-               <property name="tickInterval">
-                <number>5</number>
+              </widget>
+             </item>
+             <item>
+              <widget class="QDoubleSpinBox" name="upperThresholdSpinBox">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
                </property>
               </widget>
              </item>
@@ -1513,6 +1493,26 @@
                 </size>
                </property>
               </spacer>
+             </item>
+             <item>
+              <widget class="QLabel" name="label_12">
+               <property name="text">
+                <string>Percent:</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLineEdit" name="percentageLineEdit">
+               <property name="text">
+                <string/>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignCenter</set>
+               </property>
+               <property name="readOnly">
+                <bool>true</bool>
+               </property>
+              </widget>
              </item>
              <item>
               <widget class="QDialogButtonBox" name="buttonBox">
@@ -1697,12 +1697,12 @@
   <widget class="QDockWidget" name="consoleDockWidget">
    <property name="minimumSize">
     <size>
-     <width>104</width>
-     <height>130</height>
+     <width>445</width>
+     <height>257</height>
     </size>
    </property>
    <property name="features">
-    <set>QDockWidget::DockWidgetClosable|QDockWidget::DockWidgetMovable</set>
+    <set>QDockWidget::AllDockWidgetFeatures</set>
    </property>
    <property name="allowedAreas">
     <set>Qt::BottomDockWidgetArea</set>
@@ -1716,10 +1716,43 @@
    <widget class="QWidget" name="dockWidgetContents_4">
     <layout class="QVBoxLayout" name="verticalLayout_26">
      <item>
-      <widget class="QTextEdit" name="outputConsole">
-       <property name="readOnly">
-        <bool>true</bool>
+      <widget class="QTabWidget" name="consoleTabWidget">
+       <property name="currentIndex">
+        <number>1</number>
        </property>
+       <widget class="QWidget" name="outputTab">
+        <attribute name="title">
+         <string>Output</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="verticalLayout_30">
+         <item>
+          <widget class="QTextEdit" name="outputConsole">
+           <property name="readOnly">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="browserTab">
+        <attribute name="title">
+         <string>Dynamic Help</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="verticalLayout_29">
+         <item>
+          <widget class="QWebView" name="browserWindow">
+           <property name="url">
+            <url>
+             <string>about:blank</string>
+            </url>
+           </property>
+           <property name="renderHints">
+            <set>QPainter::Antialiasing|QPainter::HighQualityAntialiasing|QPainter::SmoothPixmapTransform|QPainter::TextAntialiasing</set>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </widget>
       </widget>
      </item>
     </layout>
@@ -1728,6 +1761,11 @@
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
+  <customwidget>
+   <class>QWebView</class>
+   <extends>QWidget</extends>
+   <header>QtWebKit/QWebView</header>
+  </customwidget>
   <customwidget>
    <class>QVTKWidget</class>
    <extends>QWidget</extends>

@@ -64,7 +64,7 @@ namespace wse {
 
 class InteractorCallback;
 
-/** */
+/** This is the wseApplication class to override notify() and loadStyleSheet(). */
 class wseApplication : public QApplication
 {
 public:
@@ -96,7 +96,7 @@ public:
   }
 };
 
-/** */
+/** This class implements the Watershed Editor GUI layout, logic, and image processing. */
 class wseGUI : public QMainWindow
 {
   Q_OBJECT
@@ -142,7 +142,7 @@ public slots:
   void numBinsSpinnerChanged(int n);
   void thresholdChanged(double lowerRatio, double upperRatio);
 
-  void thresholdTimerEvent();
+  //  void thresholdTimerEvent();
   void toggleFullScreen();
   void setNormalView();
   void setDualView();
@@ -154,23 +154,24 @@ public slots:
 
   void changeSlice(bool direction);
 
-  /** Updates all registered combo boxes with all names of loaded data */
-  void populateImageDataComboBoxes();
+  /** Syncronizes all registered combo boxes
+      (mRegisteredImageComboBoxes) with the names of image data in the
+      ui.imageListWidget.*/
+  void syncRegisteredImageComboBoxes();
+
+  /** Syncronizes all registered combo boxes
+      (mRegisteredSegmentationComboBoxes) with the names of data in
+      the ui.segmentationListWidget. */
+  void syncRegisteredSegmentationComboBoxes();
 
   /** Sets the image for isosurfacing and updates the rendering pipeline */
   void setIsosurface();
   
   /** Sets the image to use for masking out the data image (i.e. the segmentation) */
   void setImageMask();
-  
-  //  void snapToFibrosisMarker(int num);
 
+  /** */  
   void colorMapChanged(int m);
-
-  void reportThreshold();
-
-  //float cmdLineComputeIntensity(std::string data, std::string mask, float percent);
-  //float cmdLineComputePercentage(std::string data, std::string mask, float intensity);
 
 private:
   void output(const char *s)  
@@ -203,9 +204,6 @@ private:
   void updateHistogramBars();
   void updatePercentageDisplay();
 
-  void setThresholdToIntensity(double value);
-  void setThresholdToIntensity(double lower, double upper);
-
   void showStatusMessage(const QString &text, int timeout = 0);
 
   void setMouseHandling();
@@ -219,10 +217,11 @@ private:
   Ui::WSEClass ui;
 
   /** Actions triggered from the main interface */
-  QAction *mImportAction;
-  //  QAction *mExportAction;
+  QAction *mExportImageAction;
   QAction *mImportImageAction;
+  QAction *mImportWSSegmentationAction;
   //  QAction *mExportColormapAction;
+
   QAction *mFullScreenAction;
   QAction *mNormalView;
   QAction *mDualView;
@@ -264,7 +263,11 @@ private:
   
   //  IsoRenderer *mIsoRenderer;
 
-  std::vector<QComboBox *> mRegisteredComboBoxes;
+  /** This list of combo boxes is kept in sync with the master list of images from ui.imageListWidget. */
+  std::vector<QComboBox *> mRegisteredImageComboBoxes;
+
+  /** This list of combo boxes is kept in sync with the master list of images from ui.imageListWidget. */
+  std::vector<QComboBox *> mRegisteredSegmentationComboBoxes;
 
   Image mThresholdImage;
   int mIsosurfaceImage;
@@ -284,17 +287,20 @@ private:
 
 
   std::vector<int> mPoints;
-  std::vector<float> mMarkers;
-  std::vector<double> mPercentages;
+  //  std::vector<float> mMarkers;
+  //  std::vector<double> mPercentages;
 
   float mThresholdLower;
   float mThresholdUpper;
 
-  QTimer mThresholdTimer;
+  //  QTimer mThresholdTimer;
   
   QwtLinearColorMap mColorMap;
 
 private slots:
+  void unimplemented()
+  {  QMessageBox::warning(this, tr("Sorry"), QString("This function is not yet implemented."));  }
+
   /** Slots for the watersheds denoising interface. */
   void on_gaussianRadioButton_toggled(bool);
   void on_anisotropicRadioButton_toggled(bool);
@@ -369,10 +375,6 @@ protected:
   }
 
 };
-
-
-
-
 
 } // end namespace wse
 

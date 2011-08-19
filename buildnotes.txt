@@ -1,3 +1,5 @@
+##Build Notes
+
 Needs Qt 4, VTK, ITK
 
 VTK needs to be built with GUI support and the QVTKWidget  (Two options in the
@@ -6,8 +8,26 @@ Advanced CMake menu.  First configure the GUI support, then QT support.)
 Builds easiest with VTK 5.4.2.  Building with VTK versions greater than 5.4.2
 needed to configure VTK build without objective c garbage collection.
 
-QThread notes: 
+##QThread notes: 
 
 http://labs.qt.nokia.com/2010/06/17/youre-doing-it-wrong/
 http://blog.exys.org/entries/2010/QThread_affinity.html
 http://doc.qt.nokia.com/qq/qq27-responsive-guis.html
+
+
+## wseWatersheds notes
+
+itkWSLookupTableManager loads tree files that have been written out
+with itkWatershedSegmentTreeWriter
+
+to run segmentation see itkWatershedFilterAndWriter::GenerateData():
+
+Need these filters
+itkWatershedImageFilter->
+itkWatershedSegmentTreeWriter
+itkImageFileWriter
+
+To view the segmentation:
+
+
+

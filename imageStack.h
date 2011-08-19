@@ -1,16 +1,18 @@
-#ifndef IMAGESTACK_H
-#define IMAGESTACK_H
+#ifndef _wse_imageStack_h_
+#define _wse_imageStack_h_
 
 #include <QtGui>
 #include "image.h"
 
-/** */
+namespace wse {
+
+/** NEEDS DOCUMENTATION */
 class imageStack : public QObject
 {
 Q_OBJECT
 
 public:
-  imageStack();
+  imageStack() : mSelectedImage(-1) {}
   ~imageStack();
 
   // Images
@@ -35,8 +37,12 @@ public:
   void clearSelection();
   Image *selectedImage();
   const Image *selectedImage() const;
-  vtkImageImport *selectedImageVTK(bool original);
-  const vtkImageImport *selectedImageVTK(bool original) const;
+
+  /** Returns the vtkImageImport connected to the selected image. */
+  vtkImageImport *selectedImageVTK()
+  {   return mImages[mSelectedImage]->vtkImporter();  }
+  const vtkImageImport *selectedImageVTK() const
+  {   return mImages[mSelectedImage]->vtkImporter();  }
 
   // Processing
   void resetFilters();
@@ -51,5 +57,7 @@ private:
   int mSelectedImage;
   std::vector<Image *> mImages;
 };
+
+} // end namespace wse
 
 #endif // IMAGESTACK_H

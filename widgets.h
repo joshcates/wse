@@ -11,12 +11,13 @@
 #include <QGraphicsScene>
 #include <QGraphicsView>
 
+/** Extends the QListWidget to support drag-and-drop of filenames. */
 class QImageList : public QListWidget
 {
   Q_OBJECT
 public:
-  QImageList(QWidget *parent = NULL);
-  ~QImageList();
+  QImageList(QWidget *parent = NULL) : QListWidget(parent) {}
+  ~QImageList() {}
 
 protected:
   QStringList mimeTypes() const;
@@ -28,6 +29,7 @@ signals:
 };
 
 
+/** */
 class QPreviewScene : public QGraphicsScene
 {
   Q_OBJECT

@@ -1,12 +1,8 @@
 #include "wse.h"
 #include <QtGui/QApplication>
 
-//-------------------------------------------------------------------------------------
-//
-//-------------------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
-
   wse::wseApplication a(argc, argv);
   wse::wseGUI w;
 
@@ -15,7 +11,7 @@ int main(int argc, char *argv[])
   QPixmap pixmap(":/WSE/Resources/splash2.png");
   QSplashScreen splash(pixmap,Qt::WStyle_StaysOnTop);
   splash.show();
-  sleep(1.0);
+  sleep(1.0); // will break on windows... jc
   a.processEvents();
   w.show();
   w.raise();
