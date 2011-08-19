@@ -398,7 +398,7 @@
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_5">
            <item>
-            <widget class="QImageList" name="imageListWidget">
+            <widget class="wse::QImageList" name="imageListWidget">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                <horstretch>0</horstretch>
@@ -426,7 +426,7 @@
           </property>
           <layout class="QVBoxLayout" name="verticalLayout_27">
            <item>
-            <widget class="QImageList" name="segmentationListWidget">
+            <widget class="wse::QImageList" name="segmentationListWidget">
              <property name="sizePolicy">
               <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                <horstretch>0</horstretch>
@@ -1772,9 +1772,9 @@
    <header>QVTKWidget.h</header>
   </customwidget>
   <customwidget>
-   <class>QImageList</class>
+   <class>wse::QImageList</class>
    <extends>QListWidget</extends>
-   <header>widgets.h</header>
+   <header>wseWidgets.h</header>
   </customwidget>
   <customwidget>
    <class>wse::HistogramWidget</class>

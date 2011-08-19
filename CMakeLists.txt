@@ -50,26 +50,22 @@ SET( WSE_SRCS
      main.cpp
      wse.cpp
      wseProcessing.cpp
-#     image.cpp
-    widgets.cpp
+     wseWidgets.cpp
      wseHistogramWidget.cpp
-     utils.cpp
- #    imageStack.cpp
+     wseUtils.cpp
      wseGraphics/SliceViewer.cc
 #     wseGraphics/IsoRenderer.cpp
 )
 
 SET( WSE_MOC_HDRS
      wse.h
-     widgets.h
+     wseWidgets.h
      wseHistogramWidget.h
 )
 
 SET ( WSE_HDRS
-        utils.h
+        wseUtils.h
         wseGraphics/SliceViewer.h
-        colorScheme.h
-        colorMaps.h
         wseGraphics/IsoRenderer.h
 )
 

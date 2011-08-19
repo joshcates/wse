@@ -71,7 +71,7 @@
 #include "wseHistogram.hxx"
 #include "SliceViewer.h"
 //#include "IsoRenderer.h"
-#include "utils.h"
+#include "wseUtils.h"
 
 // QWT includes
 #include "qwt_color_map.h"

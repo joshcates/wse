@@ -1,6 +1,7 @@
-#include "utils.h"
+#include "wseUtils.h"
 #include <vtkImageData.h>
 
+namespace wse {
 //-------------------------------------------------------------------------------------
 //
 //-------------------------------------------------------------------------------------
@@ -176,13 +177,5 @@ void RedirectIOToConsole() {
 
 }
 
-void RedirectIOToConsole2() {
-
-
-
-}
-
-
-
 #endif
-
+} // end namespace

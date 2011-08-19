@@ -13,6 +13,8 @@
 
 class vtkImageData;
 
+namespace wse {
+
 //QImage IplImageToQImage(const IplImage *iplImage);
 bool QImageToVTKImage(const QImage &img, vtkImageData *vtkimage);
 void QColorToVTKColor(const QColor &qc, double *c);
@@ -21,6 +23,8 @@ void QColorToVTKColor(const QColor &qc, double *c);
 #ifdef WIN32
 void RedirectIOToConsole();
 #endif
+
+} // end namespace
 
 
 #endif

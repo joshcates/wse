@@ -11,6 +11,9 @@
 #include <QGraphicsScene>
 #include <QGraphicsView>
 
+
+namespace wse {
+
 /** Extends the QListWidget to support drag-and-drop of filenames. */
 class QImageList : public QListWidget
 {
@@ -69,5 +72,7 @@ public:
 private:
   QPreviewScene *mScene;
 };
+
+} // end namespace wse
 
 #endif

@@ -3,10 +3,11 @@
 // Copyright 2010 University of Utah.  All rights reserved
 //
 //---------------------------------------------------------------------------
-#include "widgets.h"
+#include "wseWidgets.h"
 #include <QtGui>
 #include <QDebug>
 
+namespace wse {
 QStringList QImageList::mimeTypes() const
 {
   QStringList strList;
@@ -139,10 +140,4 @@ void QPreviewWidget::setBackground(const QImage &bg)
   fitInView(0,0,mScene->width(),mScene->height(), Qt::KeepAspectRatio);
 }
 
-
-
-
-
-
-
-
+} // end namespace wse
