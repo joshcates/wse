@@ -11,8 +11,7 @@
 #include "itkImageRegionConstIterator.h"
 
 //local includes
-#include "exception.h"
-
+#include "wseException.h"
 
 #ifdef _WIN32
 #include <float.h>

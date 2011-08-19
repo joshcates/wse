@@ -1779,7 +1779,7 @@
   <customwidget>
    <class>wse::HistogramWidget</class>
    <extends>QWidget</extends>
-   <header>histogramWidget.h</header>
+   <header>wseHistogramWidget.h</header>
   </customwidget>
  </customwidgets>
  <resources>

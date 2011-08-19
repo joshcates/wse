@@ -57,7 +57,7 @@ namespace wseCore {
 
 
 // Interface includes
-#include <histogramWidget.h>
+#include <wseHistogramWidget.h>
 
 namespace wse {
 

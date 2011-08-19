@@ -52,28 +52,25 @@ SET( WSE_SRCS
      wseProcessing.cpp
 #     image.cpp
     widgets.cpp
-     histogramWidget.cpp
+     wseHistogramWidget.cpp
      utils.cpp
  #    imageStack.cpp
      wseGraphics/SliceViewer.cc
 #     wseGraphics/IsoRenderer.cpp
-     histogram.cpp
 )
 
 SET( WSE_MOC_HDRS
      wse.h
      widgets.h
-     histogramWidget.h
+     wseHistogramWidget.h
 )
 
 SET ( WSE_HDRS
-     histogram.h
-     utils.h
-     wseGraphics/SliceViewer.h
-#     image.hxx
-     colorScheme.h
-     colorMaps.h
-     wseGraphics/IsoRenderer.h
+        utils.h
+        wseGraphics/SliceViewer.h
+        colorScheme.h
+        colorMaps.h
+        wseGraphics/IsoRenderer.h
 )
 
 SET( WSE_UIS
@@ -128,7 +125,7 @@ INCLUDE_DIRECTORIES( ${CMAKE_BINARY_DIR} )
 #INCLUDE_DIRECTORIES( ${CMAKE_CURRENT_BINARY_DIR} )
 
 # No actual compiled code in these yet, so they are commented out.  
-#ADD_LIBRARY(CARMANumerics quantification.cpp histogram.cpp)
+#ADD_LIBRARY(CARMANumerics quantification.cpp)
 
 
 # optionally build the test files

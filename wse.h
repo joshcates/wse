@@ -65,10 +65,10 @@
 // WSE includes
 #include "wseImage.hxx"
 #include "wseImageStack.hxx"
-#include "exception.h"
+#include "wseException.h"
 #include "colorScheme.h"
 #include "colorMaps.h"
-#include "histogram.h"
+#include "wseHistogram.hxx"
 #include "SliceViewer.h"
 //#include "IsoRenderer.h"
 #include "utils.h"
