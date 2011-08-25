@@ -136,7 +136,6 @@ public:
   wseGUI(QWidget *parent = 0, Qt::WFlags flags = 0);
   ~wseGUI();
   
-  void init();
   void closeEvent(QCloseEvent *event);
   
   void updateImageDisplay();
@@ -151,8 +150,6 @@ public:
   void showStartMenu()  { this->on_addButton_released(); }
 
 public slots:
-  void visualizePage();
-
   void importDelete();
   void imageDropped(QString);
   void visClassCheckAll();
@@ -162,8 +159,6 @@ public slots:
   void exportCheckAll();
   void exportUncheckAll();
   void updateProgress(int p);
-  void visSelectionChanged(QListWidgetItem *item);
-  void visMethodChanged(int m);
   void colorSchemeSelectorChanged(int m);
   void viewerChangeSlice();
   void updateHistogram();
@@ -258,8 +253,13 @@ private:
   /** The main progress bar for the GUI.  */
   QProgressBar *mProgressBar;
 
-  /** TODO: Document */
+  /** The slice-by-slice image viewer for the floating point data
+      volumes. */
   SliceViewer *mSliceViewer;
+
+  /** The slice-by-slice image viewer for the watershed segmentation
+      output */
+  SliceViewer *mSegmentSliceViewer;
 
   /** TODO: Document */
   vtkImageData *mNullVTKImageData;
@@ -269,10 +269,12 @@ private:
   
   //  IsoRenderer *mIsoRenderer;
 
-  /** This list of combo boxes is kept in sync with the master list of images from ui.imageListWidget. */
+  /** This list of combo boxes is kept in sync with the master list of
+      images from ui.imageListWidget. */
   std::vector<QComboBox *> mRegisteredImageComboBoxes;
 
-  /** This list of combo boxes is kept in sync with the master list of images from ui.imageListWidget. */
+  /** This list of combo boxes is kept in sync with the master list of
+      images from ui.imageListWidget. */
   std::vector<QComboBox *> mRegisteredSegmentationComboBoxes;
 
   /** TODO: Document */

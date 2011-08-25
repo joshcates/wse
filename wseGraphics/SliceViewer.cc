@@ -42,6 +42,7 @@ vtkStandardNewMacro(SliceViewer);
 //----------------------------------------------------------------------------
 SliceViewer::SliceViewer()
 {
+  this->mImageLookupTable = NULL;
   this->RenderWindow    = NULL;
   this->Renderer        = NULL;
   this->ImageActor      = vtkImageActor::New();
@@ -663,6 +664,12 @@ void SliceViewer::InstallPipeline()
   WindowLevel->PassAlphaToOutputOn();
   WindowLevel->SetOutputFormatToRGBA();
 
+  if (mImageLookupTable != NULL)
+    {
+      WindowLevel->SetLookupTable(mImageLookupTable);
+    }
+
+
   //ImageActor->SetInput(mImageBlend->GetOutput());
 
   if (this->Renderer && this->ImageActor)
@@ -841,6 +848,7 @@ void SliceViewer::UpdateDisplay()
 
   if (mImage) {
     this->WindowLevel->SetInputConnection(mImage);
+    if (mImageLookupTable != NULL) this->WindowLevel->SetLookupTable(mImageLookupTable);
     mImageBlend->AddInputConnection(WindowLevel->GetOutputPort());
   }
 
@@ -1017,12 +1025,19 @@ void SliceViewer::PrintSelf(ostream& os, vtkIndent indent)
 
 void SliceViewer::ResetWindowLevel(vtkImageMapToWindowLevelColors *windowLevel)
 {
-  if (windowLevel) {
+  if (windowLevel) 
+    {
     vtkImageData *data = vtkImageData::SafeDownCast(windowLevel->GetInput());
     double *range = data->GetScalarRange();
     windowLevel->SetWindow(range[1] - range[0]);
     windowLevel->SetLevel(0.5 * (range[1] + range[0]));
-  }
+    
+    if (mImageLookupTable != NULL)
+      {
+        windowLevel->SetLookupTable(mImageLookupTable);
+      }
+
+    }
 }
 
 void SliceViewer::SetShowMask(bool showMask) {

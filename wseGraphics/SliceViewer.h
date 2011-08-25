@@ -214,6 +214,8 @@ public:
   //VTK_LEGACY(void SetZSlice(int));
   void SetZSlice(int);
 
+  void SetImageLookupTable(vtkLookupTable *l)
+  {    mImageLookupTable  = l;  }
 
   void SetShowMask(bool);
   void SetShowThreshold(bool);
@@ -242,6 +244,8 @@ protected:
   vtkInteractorStyleImage         *InteractorStyle;
   vtkImageBlend                   *mImageBlend;
   vtkImageFlip                    *mImageFlip;
+
+  vtkLookupTable                  *mImageLookupTable;
 
   vtkAlgorithmOutput              *mImage;
   vtkAlgorithmOutput              *mMask;

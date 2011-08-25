@@ -32,6 +32,7 @@
 #include <vtkContourFilter.h>
 #include <vtkOpenGLPolyDataMapper.h>
 #include <vtkImageCast.h>
+#include <vtkImageMapToColors.h>
 
 //#include <itkImageToVTKImageFilter.h>
 
@@ -45,23 +46,53 @@ class Segmentation
   typedef itk::WatershedSegmentTreeWriter<float>::SegmentTreeType SegmentTreeType;
 
   /** Constructor takes a ULongImage pointer and a SegmentTreeType pointer*/
-  Segmentation(ULongImage::itkImageType *, SegmentTreeType *t);
+  Segmentation(ULongImage *, SegmentTreeType *t);
   ~Segmentation();
 
   /** Return the segment tree object. */
   SegmentTreeType::ConstPointer segmentTree() const
     { return SegmentTreeType::ConstPointer(mSegmentTree); }
   
+  /** Return the wseImage of the watershed transform */
+  const ULongImage *watershedTransform() const
+  {    return mWatershedTransform;   }
+
+  /** Return the itk::Image of the watershed transform */
+  ULongImage::itkImageType::ConstPointer itkImage() const
+    { return ULongImage::itkImageType::ConstPointer(mWatershedTransform->itkImage()); }
+
+  /** Return the vtkImporter for the itk::Image of the watershed
+      transform. */
+  const vtkImageImport *vtkImporter() const
+  { return mWatershedTransform->vtkImporter(); }
+  vtkImageImport *vtkImporter()
+  { return mWatershedTransform->vtkImporter(); }
+ 
+  /** Returns the number of slices in the watershed transform image. */
+  unsigned int nSlices() const
+  { return mWatershedTransform->nSlices(); }
+ 
   /** Write the segmentation to disk.  ToDo: UNIMPLEMENTED */
   bool write() const { return false;}
 
   /** Read a segmentation from disk. ToDo: UNIMPLEMENTED */
   bool read(const char *fn) { return false; }
 
+  /** Return an output port for the VTK rendering pipeline. */
+  vtkAlgorithmOutput *GetOutputPort()
+  { return mWatershedTransform->vtkImporter()->GetOutputPort(); }
+
+  /** Returns the vtk color lookup table from the watershed manager. */
+  vtkLookupTable *GetLookupTable()
+  {
+    return mLUTManager->GetLookupTable();
+  }
+
  private:
-  /** The labeled image of the watershed transform.  This is one of
-      the outputs of the itkWatershedImageFilter. */
-  ULongImage::itkImageType::Pointer mWatershedTransform;
+  /** A wseImage wrapper around the labeled image of the watershed
+      transform, which is one of the outputs of the
+      itkWatershedImageFilter. */
+  ULongImage* mWatershedTransform;
 
   /** The tree of all computed merges of the watershed catchment
       basins. This is the second output of the
@@ -76,6 +107,7 @@ class Segmentation
 
   /** Bounding box manager for the segmented image. */
   vtkWSBoundingBoxManager* mBoundingBoxManager;
+
 };
 
 } // end namespace wse

@@ -15,7 +15,7 @@ void wseGUI::mITKFilteringThread_started()
 }
 
 void wseGUI::mITKFilteringThread_finished()
-{     
+{
   ui.progressBar->setValue(100);
   ui.progressBar->hide();
   if (mITKFilteringThread->errorFlag() == true)
@@ -61,9 +61,16 @@ void wseGUI::mITKSegmentationThread_finished()
   if (mSegmentation != NULL) { delete mSegmentation; }
    
   // Create the segmentation object.
-  mSegmentation = new Segmentation(mITKSegmentationThread->filter()->GetOutput(),
-				   dynamic_cast<itk::WatershedImageFilter<FloatImage::itkImageType> *>
-				   (mITKSegmentationThread->filter().GetPointer())->GetSegmentTree());
+
+  ULongImage *img = new ULongImage(mITKSegmentationThread->filter()->GetOutput());
+  img->name(mITKSegmentationThread->description());
+
+  //  mSegmentation = new Segmentation(mITKSegmentationThread->filter()->GetOutput(),
+  mSegmentation = new Segmentation(img, dynamic_cast<itk::WatershedImageFilter<FloatImage::itkImageType> *>
+                                   (mITKSegmentationThread->filter().GetPointer())->GetSegmentTree());
+
+  this->updateImageDisplay();
+  this->setDualView();
 }
     
 void wseGUI::runGaussianFiltering()
@@ -86,7 +93,9 @@ void wseGUI::runGaussianFiltering()
 
 void wseGUI::runAnisotropicFiltering()
 {
-  this->output(QString("Starting %1 iterations of Classic Anisotropic Diffusion filtering with conductance of %2").arg(ui.conductanceSpinBox->value()).arg(ui.iterationsSpinBox->value()));
+  this->output(QString("Starting %1 iterations of Classic Anisotropic Diffusion filtering with conductance of %2")
+               .arg(ui.conductanceSpinBox->value())
+               .arg(ui.iterationsSpinBox->value()));
 
   itk::GradientAnisotropicDiffusionImageFilter<FloatImage::itkImageType,FloatImage::itkImageType>::Pointer filter
     =  itk::GradientAnisotropicDiffusionImageFilter<FloatImage::itkImageType,FloatImage::itkImageType>::New();
@@ -99,14 +108,16 @@ void wseGUI::runAnisotropicFiltering()
   // QThread object.  The description will be used later to create GUI
   // menu entries for the output of the filtering.
   mITKFilteringThread->setFilter(filter);
-  mITKFilteringThread->setDescription(mImageStack->name(ui.denoisingInputComboBox->currentIndex()) + QString(" (classic anisotropic)"));
+  mITKFilteringThread->setDescription(mImageStack->name(ui.denoisingInputComboBox->currentIndex()) 
+                                      + QString(" (classic anisotropic)"));
   mITKFilteringThread->start();
 }
 
 void wseGUI::runCurvatureFiltering()
 {
-
-  this->output(QString("Starting %1 iterations of Curvature Anisotropic Diffusion filtering with conductance of %2").arg(ui.conductanceSpinBox->value()).arg(ui.iterationsSpinBox->value()));
+  this->output(QString("Starting %1 iterations of Curvature Anisotropic Diffusion filtering with conductance of %2")
+               .arg(ui.conductanceSpinBox->value())
+               .arg(ui.iterationsSpinBox->value()));
 
   itk::CurvatureAnisotropicDiffusionImageFilter<FloatImage::itkImageType,FloatImage::itkImageType>::Pointer filter
     =  itk::CurvatureAnisotropicDiffusionImageFilter<FloatImage::itkImageType,FloatImage::itkImageType>::New();
@@ -119,7 +130,8 @@ void wseGUI::runCurvatureFiltering()
   // QThread object.  The description will be used later to create GUI
   // menu entries for the output of the filtering.
   mITKFilteringThread->setFilter(filter);
-  mITKFilteringThread->setDescription(mImageStack->name(ui.denoisingInputComboBox->currentIndex()) + QString(" (curvature anisotropic)"));
+  mITKFilteringThread->setDescription(mImageStack->name(ui.denoisingInputComboBox->currentIndex()) 
+                                      + QString(" (curvature anisotropic)"));
   mITKFilteringThread->start();
 }
 
@@ -136,7 +148,8 @@ void wseGUI::runGradientFiltering()
   // QThread object.  The description will be used later to create GUI
   // menu entries for the output of the filtering.
   mITKFilteringThread->setFilter(filter);
-  mITKFilteringThread->setDescription(mImageStack->name(ui.gradientInputComboBox->currentIndex()) + QString(" (gradient)"));
+  mITKFilteringThread->setDescription(mImageStack->name(ui.gradientInputComboBox->currentIndex()) 
+                                      + QString(" (gradient)"));
   mITKFilteringThread->start();
 }
 
@@ -158,10 +171,10 @@ void wseGUI::runWatershedSegmentation()
       int ret = msgBox.exec();
       
       if (ret == QMessageBox::Cancel)
-	{
-	  this->output("Cancelled the watershed segmentation filter.");
-	  return;
-	}
+        {
+          this->output("Cancelled the watershed segmentation filter.");
+          return;
+        }
     } // end if mSegmentation != NULL
   
   itk::WatershedImageFilter<FloatImage::itkImageType>::Pointer filter = 
@@ -174,7 +187,8 @@ void wseGUI::runWatershedSegmentation()
   // QThread object.  The description will be used later to create GUI
   // menu entries for the output of the filtering.
   mITKSegmentationThread->setFilter(filter);
-  mITKSegmentationThread->setDescription(mImageStack->name(ui.watershedInputComboBox->currentIndex()) + QString(" (watershed transform)"));
+  mITKSegmentationThread->setDescription(mImageStack->name(ui.watershedInputComboBox->currentIndex())
+                                         + QString(" (watershed transform)"));
   mITKSegmentationThread->start();
 }
 

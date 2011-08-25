@@ -50,50 +50,50 @@ wseGUI::wseGUI(QWidget *parent, Qt::WFlags flags) :
   mSmoothStepThreshold(false)
   //  mScaleWidget(QwtScaleDraw::BottomScale, this), mCurrentColorMap(0)
 {
-  mSegmentation = NULL;
+
+  // Initialize some image data to NULL
+  mSegmentation    = NULL;
   mIsosurfaceImage = NULL;
-  mSliceViewer = SliceViewer::New();
+
   mNullVTKImageData = vtkImageData::New();
-  
+
+  // Create the slice-by-slice image viewers
+  mSliceViewer = SliceViewer::New();
+  mSegmentSliceViewer = SliceViewer::New();
+  mSegmentSliceViewer->SetImageMask(NULL);
+
+  // Initialize some state variables
   mImageData = -1;
   mImageMask = -1;
   mIsosurfaceImage = -1;
-  //  mScalarMethod = 0;
   mFullScreen = false;
   mPercentageShown = false;
 
+  // Create the QThread objects that execute filtering
   mITKFilteringThread  = new 
     itk::QThreadITKFilter<itk::ImageToImageFilter<FloatImage::itkImageType,FloatImage::itkImageType> >;
   mITKSegmentationThread =  new 
     itk::QThreadITKFilter<itk::ImageToImageFilter<FloatImage::itkImageType,ULongImage::itkImageType> >;
 
-  this->init();
-}
 
-wseGUI::~wseGUI()
-{
-  delete mITKFilteringThread;
-  delete mITKSegmentationThread;
-  delete mSegmentation;
+  // Create key member variables
+  mImageStack = new FloatImageStack();
 
-  if (mImageStack) { delete mImageStack; }
-  //mVTKImageViewer->Delete();
-  mSliceViewer->Delete();
-  mNullVTKImageData->Delete();
-}
 
-void wseGUI::init()
-{
 #ifdef WIN32
   RedirectIOToConsole();
 #endif
 
+  // Setup main UI
   ui.setupUi(this);
-  readSettings();
-  mImageStack = new FloatImageStack();
+
+  // Load window and layout settings
+  this->readSettings();
   
+  // Finish setting up UI
   this->setupUI();
 
+  // Change the view to the standard slice view
   this->setSliceView();
 
   // Register image selection combo box widgets to stay in sync with file names
@@ -106,6 +106,18 @@ void wseGUI::init()
   connect(mITKFilteringThread,SIGNAL(started()),this,SLOT(mITKFilteringThread_started()));
   connect(mITKSegmentationThread,SIGNAL(finished()),this,SLOT(mITKSegmentationThread_finished()));
   connect(mITKSegmentationThread,SIGNAL(started()),this,SLOT(mITKSegmentationThread_started()));
+}
+
+wseGUI::~wseGUI()
+{
+  delete mITKFilteringThread;
+  delete mITKSegmentationThread;
+  delete mSegmentation;
+
+  if (mImageStack) { delete mImageStack; }
+  //mVTKImageViewer->Delete();
+  mSliceViewer->Delete();
+  mNullVTKImageData->Delete();
 }
 
 void wseApplication::loadStyleSheet(const char *fn)
@@ -138,12 +150,13 @@ void wseGUI::setupUI()
   // For now we only support a single segmentation at a time, so hide the list of segmentation data.
   ui.segmentationDataGroupBox->hide();
 
+  // Create and initialize the picker objects
   PickerCallback *mPickerCallback = new PickerCallback(this);
   mPointPicker = vtkPointPicker::New();
   mPointPicker->AddObserver(vtkCommand::EndPickEvent, mPickerCallback);
   ui.vtkRenderWidget->GetInteractor()->SetPicker(mPointPicker);
 
-  // Toolbar
+  // Construct the Toolbar
   // mImportAction = new QAction(QIcon(":/WSE/Resources/import.png"), tr("&Load Volume"), this);
   // mImportAction->setToolTip(tr("Load an image volume"));
   // mImportAction->setStatusTip(tr("Load an image volume"));
@@ -172,7 +185,6 @@ void wseGUI::setupUI()
   ui.mainToolBar->setEnabled(false);
   
   // Menubar -- Set up the actions, connect to slots, and create the menu
-
   // Load volume action
   mImportImageAction = new QAction(tr("Load Volume"), this);
   mImportImageAction->setShortcut(tr("Load image volumes from file"));
@@ -230,9 +242,7 @@ void wseGUI::setupUI()
   fileMenu->addAction(mExportImageAction);
   fileMenu->addAction(prefAction);
   fileMenu->addAction(exitAction);
-
-  
-
+ 
   // QMenu *toolsMenu = ui.menuBar->addMenu(tr("&Tools"));
   // toolsMenu->addAction(mImportAction);
   // toolsMenu->addAction(mExportAction);
@@ -292,7 +302,9 @@ void wseGUI::setupUI()
   // connect (mapper, SIGNAL(mapped(int)), this, SLOT(snapToFibrosisMarker(int)));
  
   ui.menuBar->setEnabled(true);
-  
+
+  // Set up the Image List widget and connections-- this is the list
+  // of loaded image volumes in the Data window
   ui.deleteButton->setEnabled(false);
   //  ui.imageListWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);
   ui.imageListWidget->setSelectionMode(QAbstractItemView::SingleSelection);
@@ -306,8 +318,10 @@ void wseGUI::setupUI()
   connect(ui.sliceSelector,SIGNAL(valueChanged(int)), this, SLOT(viewerChangeSlice()));
   ui.sliceSelector->setTracking(true);
 
-  connect(ui.imageListWidget, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, SLOT(on_setImageDataButton_released()));
+  connect(ui.imageListWidget, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, 
+          SLOT(on_setImageDataButton_released()));
   
+  // Set up the slice selection widgets and connections
   ui.sliceSelector->setEnabled(false);
   
   connect(ui.imageListWidget, SIGNAL(imageDropped(QString)),
@@ -316,45 +330,48 @@ void wseGUI::setupUI()
   ui.vtkImageWidget->SetRenderWindow(mSliceViewer->GetRenderWindow());
   mSliceViewer->SetupInteractor(ui.vtkImageWidget->GetRenderWindow()->GetInteractor());
 
+  ui.vtkSegmentationWidget->SetRenderWindow(mSegmentSliceViewer->GetRenderWindow());
+  mSegmentSliceViewer->SetupInteractor(ui.vtkSegmentationWidget->GetRenderWindow()->GetInteractor());
 
+  // 
   mVTKCallback = new InteractorCallback(this);
 
-  setMouseHandling();
+  // Set up mouse event handling 
+  this->setMouseHandling();
 
+  // Default window/level for the slice viewers and show the slice viewers
   mSliceViewer->SetColorLevel(128);
   mSliceViewer->SetColorWindow(256);
   ui.vtkImageWidget->show();
 
-  
-  // Connect the processing buttons
+  mSegmentSliceViewer->SetColorLevel(128);
+  mSegmentSliceViewer->SetColorWindow(256);
+  ui.vtkSegmentationWidget->show();
+
+  // Connect the visualization selection buttons
   connect(ui.setIsosurfaceButton, SIGNAL(released()), this, SLOT(setIsosurface()));
   connect(ui.setImageMaskButton,  SIGNAL(released()), this, SLOT(setImageMask()));
  
-
+  // ... but disable them for now
   ui.setIsosurfaceButton->setEnabled(false);
   ui.setIsosurfaceButton->hide();
-
   ui.setImageDataButton->setEnabled(false);
   ui.setImageMaskButton->setEnabled(false);
-
   ui.setImageMaskButton->hide();
 
-  // ... the color schemes
+  // Initialize the color schemes
   for (unsigned int i = 0; i < mColorSchemes.size(); i++)
   {
     ui.colorSchemeSelector->addItem(QString(mColorSchemes[i].name.c_str()));
   }
   connect(ui.colorSchemeSelector, SIGNAL(currentIndexChanged(int)), this, 
     SLOT(colorSchemeSelectorChanged(int)));
-          
-          
-  // Set up histogram bins, window, and level
+                    
+  // Set up histogram bins, window, and level and controls (along with connections).
   ui.numBinsSpinner->setMinimum(mMinHistogramBins);
   ui.numBinsSpinner->setMaximum(mMaxHistogramBins);
   ui.numBinsSpinner->setValue(mMaxHistogramBins/4);
-  
   connect(ui.numBinsSpinner, SIGNAL(valueChanged(int)),this, SLOT(numBinsSpinnerChanged(int)));
-
   connect(ui.histogramSlider_1, SIGNAL(thresholdChanged(double, double)),this,SLOT(histogramThresholdChanged(double,double)));
 
   for (unsigned int i = 0; i < mColorMaps.size(); ++i) {
@@ -369,8 +386,8 @@ void wseGUI::setupUI()
   ui.statusBar->addPermanentWidget(mProgressBar);
   mProgressBar->hide();
   
-
-  updateColorMap(); 
+  // ???
+  this->updateColorMap(); 
 
   //  QVBoxLayout *vbox = new QVBoxLayout;
   // vbox->addWidget(&mScaleWidget);
@@ -378,18 +395,12 @@ void wseGUI::setupUI()
   // vbox->setMargin(0);
   //  ui.colorScaleGroupBox->setLayout(vbox);
 
+  // Add crosshair actor to the slice viewer
   mCrosshairActor = vtkActor::New();
   mSliceViewer->GetRenderer()->AddActor(mCrosshairActor);
 
   // set defaults for basic mode
-  //ui.smoothGroupBox->setChecked(false);
-  //ui.advancedOptionsGroupBox->setChecked(false);
-  //ui.showMaskOnIsoSurface->setChecked(false);
   //ui.scalarMethodComboBox->setCurrentIndex(scalarMethods.size()-1);
-  //ui.imageInterpolationComboBox->setCurrentIndex(1);
-  //ui.maskInterpolationComboBox->setCurrentIndex(1);
-  //ui.subdivideMeshCheckBox->setChecked(true);
-
   ui.smoothGroupBox->setChecked(false);
   ui.advancedOptionsGroupBox->setChecked(false);
   ui.showMaskOnIsoSurface->setChecked(false);
@@ -398,6 +409,7 @@ void wseGUI::setupUI()
   ui.maskInterpolationComboBox->setCurrentIndex(1);
   ui.subdivideMeshCheckBox->setChecked(true);
 
+  // Now initialize the Waterhshed segmentation module UI
   this->setupWatershedWindowUI();
 }
 
@@ -409,7 +421,6 @@ void wseGUI::setupWatershedWindowUI()
 
   //
 }
-
 
 
 void wseGUI::numBinsSpinnerChanged(int n) 
@@ -491,7 +502,11 @@ void wseGUI::on_setImageDataButton_released()
   ui.sliceSelector->setEnabled(true);
   this->updateImageListIcons();
   this->updateImageDisplay();
-  this->setSliceView();
+  
+  if (mSegmentation == NULL)
+    {
+      this->setSliceView();
+    }
 }
 
 void wseGUI::setImageMask()
@@ -517,7 +532,7 @@ void wseGUI::setIsosurface()
     mIsosurfaceImage = ui.imageListWidget->currentRow();//mImageStack->selectedImageVTK(true)->GetOutputPort();
     updateImageListIcons();
 
-    this->visualizePage();
+    //    this->visualizePage();
   } else {
     //    int ret = 
     QMessageBox::critical(this, tr("WSE"),
@@ -554,8 +569,8 @@ void wseGUI::readSettings()
 }
 
 
-void wseGUI::visualizePage()
-{
+//void wseGUI::visualizePage()
+//{
   // if (mImageData != -1) {
   //   mIsoRenderer->setImageData(mImageStack->image(mImageData));
   // } else {
@@ -588,66 +603,98 @@ void wseGUI::visualizePage()
   // mIsoRenderer->createIsoSurfaces();
   // updateColorMap(); 
 
-}
+//}
 
 void wseGUI::viewerChangeSlice()
 {
-  if (mImageData == -1) {
-    return;
-  }
+  if (mImageData == -1)  { return;   }
+
   std::stringstream ss;
   ss << this->ui.sliceSelector->value();
   ui.sliceNumberLabel->setText(QString(ss.str().c_str()));
+  
+  // Change the slice number in the floating point image viewer
   this->mSliceViewer->SetZSlice(this->ui.sliceSelector->value());
   this->mSliceViewer->Render();
 
+  // Change the slice number of the segmentation image 
+  if (mSegmentation != NULL)
+    {
+      this->mSegmentSliceViewer->SetZSlice(this->ui.sliceSelector->value());
+      this->mSegmentSliceViewer->Render();
+    }
 
   mCrosshairActor->SetMapper(NULL);
 
-
-  //  mIsoRenderer->setSliceDisplayExtent(mSliceViewer->GetImageActor()->GetDisplayExtent());
+  // mIsoRenderer->setSliceDisplayExtent(mSliceViewer->GetImageActor()->GetDisplayExtent());
   // mIsoRenderer->updateClipPlane();
   // redrawIsoSurface();
 }
 
-void wseGUI::updateImageDisplay() {
-
+void wseGUI::updateImageDisplay() 
+{
   if (mImageData != -1) 
     {
       mSliceViewer->SetImageMask(NULL);
       
-      FloatImage *image = mImageStack->image(mImageData);
-      vtkImageImport *imageImport = image->vtkImporter();
-      mSliceViewer->SetInputConnection(imageImport->GetOutputPort());
+      // Connect selected image to the viewer port
+      mSliceViewer->SetInputConnection(mImageStack->image(mImageData)->vtkImporter()->GetOutputPort());
+      
+      // Connect segmentation to the segmentation viewer port if it
+      // exists and its number of slices matches those of the floating
+      // point volume.  This logic assumes that if a user is viewing a
+      // volume with the same number of slices, then it could be an
+      // image from which the segmentation was derived.  (If not, we
+      // will at least still be safe displaying slices of the
+      // segmentation.)
+      if (mSegmentation != NULL)
+	{
+          if (mSegmentation->nSlices() == mImageStack->image(mImageData)->nSlices())
+            {
+              mSegmentSliceViewer->SetInputConnection(mSegmentation->GetOutputPort());
+              mSegmentSliceViewer->SetImageLookupTable(mSegmentation->GetLookupTable());
+              this->mSegmentSliceViewer->SetZSlice(this->ui.sliceSelector->value());
+
+              // TODO: Somehow rendering here causes two invalid
+              // drawable errors. If I wait and let the change slice
+              // events trigger re-rendering, then I do not get
+              // errors.  Need to figure this out...
+              mSegmentSliceViewer->Render();
+            }	  
+	}
+      else
+        {  mSegmentSliceViewer->DisableDisplay();    }
       
       // Add the mask as an overlay to the image view window
-      if (mImageMask != -1) {
-	mSliceViewer->SetImageMask(mImageStack->image(mImageMask)->vtkImporter()->GetOutputPort());
-      }
-      
+      if (mImageMask != -1) 
+	{
+	  mSliceViewer->SetImageMask(mImageStack->image(mImageMask)->vtkImporter()->GetOutputPort());
+	}
       mSliceViewer->Render();
 
     // Set up the image slider
     ui.sliceSelector->setMinimum(0);
-    ui.sliceSelector->setMaximum(image->nSlices()-1);
+    //    ui.sliceSelector->setMaximum(image->nSlices()-1);
+    ui.sliceSelector->setMaximum(mImageStack->image(mImageData)->nSlices()-1);
     ui.sliceSelector->setSingleStep(1);
     ui.sliceSelector->setPageStep(1);
-  } else {
-    // disable rendering pipeline
-    //mVTKImageViewer2->SetInput(mNullVTKImageData);
-    mSliceViewer->DisableDisplay();
-  }
-
+    } 
+  else 
+    {
+      // disable rendering pipeline
+      //mVTKImageViewer2->SetInput(mNullVTKImageData);
+      mSliceViewer->DisableDisplay();
+      mSegmentSliceViewer->DisableDisplay();
+    }
+  
   //  QTime startTime =  QTime::currentTime();
-
   this->updateHistogram();
 
   //  qint32 msecs = startTime.msecsTo( QTime::currentTime() );
   //  std::cerr << "Histogram generation took " << msecs << "ms\n";
 
-  visualizePage();
-  setMouseHandling();
-
+  //  visualizePage();
+  this->setMouseHandling();
 }
 
 void wseGUI::on_imageListWidget_itemSelectionChanged()
@@ -930,11 +977,6 @@ void wseGUI::exportUncheckAll()
 }
 
 
-void wseGUI::visSelectionChanged(QListWidgetItem *item)
-{
-
-}
-
 void wseGUI::colorSchemeSelectorChanged(int val)
 {
   //  mIsoRenderer->setBackgroundColor(mColorSchemes[val].background.r,
@@ -944,11 +986,8 @@ void wseGUI::colorSchemeSelectorChanged(int val)
   //redrawIsoSurface();
 }
 
-void wseGUI::visMethodChanged(int val)
+void wseGUI::updateProgress(int p) 
 {
-}
-
-void wseGUI::updateProgress(int p) {
   mProgressBar->setValue(p);
 }
 
@@ -1313,7 +1352,7 @@ void wseGUI::on_scalarSurfaceComboBox_currentIndexChanged( int index )
 	  ui.endoSurfaceComboBox->setCurrentIndex(ISO_SURFACE);
 	}
     }
-  visualizePage();
+  //  visualizePage();
   // redrawIsoSurface();
 }
 
@@ -1512,6 +1551,11 @@ void wseGUI::setMouseHandling()
   ui.vtkImageWidget->GetRenderWindow()->GetInteractor()->RemoveObservers(vtkCommand::MouseWheelForwardEvent);
   ui.vtkImageWidget->GetRenderWindow()->GetInteractor()->AddObserver(vtkCommand::MouseWheelBackwardEvent, mVTKCallback);
   ui.vtkImageWidget->GetRenderWindow()->GetInteractor()->AddObserver(vtkCommand::MouseWheelForwardEvent, mVTKCallback);
+
+  ui.vtkSegmentationWidget->GetRenderWindow()->GetInteractor()->RemoveObservers(vtkCommand::MouseWheelBackwardEvent);
+  ui.vtkSegmentationWidget->GetRenderWindow()->GetInteractor()->RemoveObservers(vtkCommand::MouseWheelForwardEvent);
+  ui.vtkSegmentationWidget->GetRenderWindow()->GetInteractor()->AddObserver(vtkCommand::MouseWheelBackwardEvent, mVTKCallback);
+  ui.vtkSegmentationWidget->GetRenderWindow()->GetInteractor()->AddObserver(vtkCommand::MouseWheelForwardEvent, mVTKCallback);
 
   ui.vtkRenderWidget->GetRenderWindow()->GetInteractor()->RemoveObservers(vtkCommand::MouseWheelBackwardEvent);
   ui.vtkRenderWidget->GetRenderWindow()->GetInteractor()->RemoveObservers(vtkCommand::MouseWheelForwardEvent);

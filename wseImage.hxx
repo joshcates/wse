@@ -2,6 +2,8 @@
 #define _wse_image_hxx
 
 #include <iostream>
+#include <limits>
+
 
 // Qt Includes
 #include <QtGui>
@@ -12,6 +14,7 @@
 #include "itkDiscreteGaussianImageFilter.h"
 #include "itkImageFileReader.h"
 #include "itkImageFileWriter.h"
+#include "itkImageRegionConstIterator.h"
 
 // VTK Includes
 #include "vtkImageData.h"
@@ -67,24 +70,24 @@ class Image
   void constructImageInterpolators();
     
   /** Returns the number of pixels on the x-axis of the image */
-  inline int x() const { return this->width(); }
-  int width() const
+  inline unsigned int x() const { return this->width(); }
+  unsigned int width() const
   {
     if (mITKImage) return mITKImage->GetBufferedRegion().GetSize()[0];
     else return 0;
   }
   
   /** Returns the number of pixels on the y-axis of the image */
-  inline int y() const { return this->height(); }
-  int height() const
+  inline unsigned int y() const { return this->height(); }
+  unsigned int height() const
   {
     if (mITKImage) return mITKImage->GetBufferedRegion().GetSize()[1];
     else return 0;
   }
 
   /** Returns the number of pixels on the z-axis of the image */
-  inline int z() const { return this->nSlices(); }
-  int nSlices() const
+  inline unsigned int z() const { return this->nSlices(); }
+  unsigned int nSlices() const
   {
     if (mITKImage)
     {
@@ -155,6 +158,10 @@ class Image
   /** Set a name for this image (useful for GUIs).  Note that this is
       not a file name.*/
   void name(const QString &n)  { mName = n; }
+
+  /** Computes the maximum value stored in the image.  Note that this
+      requires a traversal of the image each time that it is called.*/
+  T computeMaximumImageValue() const;
   
 private:
   /** Linear interpolator used by getPixel functions. */
@@ -364,6 +371,22 @@ bool Image<T>::isBinarySegmentation()
   else { return true; }
 }
  
+template<class T>
+T Image<T>::computeMaximumImageValue() const
+{
+  itk::ImageRegionConstIterator<itkImageType> it(mITKImage, mITKImage->GetLargestPossibleRegion());
+  
+  T max = std::numeric_limits<T>::min();
+  it.GoToBegin();
+  while (! it.IsAtEnd() )
+    {
+      if (it.Value() > max) max = it.Value();
+      ++it;
+    }
+
+  return max;
+}
+
 
 // Define some standard types.
 typedef Image<float> FloatImage;
