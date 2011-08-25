@@ -26,10 +26,14 @@
 #include "vtkLookupTable.h"
 #include "vtkLookupTableEquivalencyHash.h"
 #include "vtkImageData.h"
+#include "itkWatershedSegmentTreeWriter.h"
 
 class VTK_EXPORT vtkWSLookupTableManager : public vtkObject
 {
 public:
+  typedef itk::WatershedSegmentTreeWriter<float>::SegmentTreeType SegmentTreeType;
+  typedef SegmentTreeType::merge_t merge_t;
+
   static vtkWSLookupTableManager *New();
 
   vtkTypeMacro(vtkWSLookupTableManager,vtkObject);
@@ -60,6 +64,9 @@ public:
 
   // Resets the merge state to the UndoPositionPointer.
   float UndoLastMerge();
+
+  /** Reads the merge data from a segment tree, which is an output of the itk::WatershedImageFilter.*/
+  void LoadTree(SegmentTreeType::Pointer);
 
   // Loads a merge tree from a data file with filename fn.
   void LoadTreeFile(const char* fn);  

@@ -24,11 +24,11 @@ IF (ITK_FOUND)
  INCLUDE (${USE_ITK_FILE})
 ENDIF(ITK_FOUND)
 
-include(FindQwt.cmake)
-if(QWT_FOUND)
-  include_directories( ${QWT_INCLUDE_DIR})
-  link_directories( ${QWT_LIBRARY} )
-endif(QWT_FOUND)
+#include(FindQwt.cmake)
+#if(QWT_FOUND)
+ # include_directories( ${QWT_INCLUDE_DIR})
+ #link_directories( ${QWT_LIBRARY} )
+#endif(QWT_FOUND)
 
 # Build the watersheds library
 set(WSE_WATERSHEDS_SRCS
@@ -44,7 +44,7 @@ wseWatersheds/vtkWSLookupTableManager.cxx
 
 add_library(wseWatersheds ${WSE_WATERSHEDS_SRCS})
 
-include_directories(wseGraphics)
+include_directories(wseGraphics wseWatersheds)
 
 SET( WSE_SRCS
      main.cpp
@@ -52,6 +52,7 @@ SET( WSE_SRCS
      wseProcessing.cpp
      wseWidgets.cpp
      wseHistogramWidget.cpp
+     wseSegmentation.cpp
      wseUtils.cpp
      wseGraphics/SliceViewer.cc
 #     wseGraphics/IsoRenderer.cpp
@@ -162,10 +163,10 @@ ADD_EXECUTABLE( WSE MACOSX_BUNDLE WIN32
  		 ${WSE_MOC_HDRS}
 )
 
-TARGET_LINK_LIBRARIES( WSE ${QT_LIBRARIES} ITKAlgorithms
+TARGET_LINK_LIBRARIES( WSE wseWatersheds ${QT_LIBRARIES} ITKAlgorithms
                          ITKBasicFilters 
                          ITKIO ITKNumerics ITKCommon QVTK vtkCommon
-                         vtkGraphics vtkImaging vtkRendering vtkWidgets qwt)
+                         vtkGraphics vtkImaging vtkRendering vtkWidgets)
 
 # # INSTALLATION AND PACKAGING
 # SET(plugin_dest_dir bin)

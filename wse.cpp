@@ -1,10 +1,5 @@
 #include "wse.h"
 
-//#include "itkScalarImageToListAdaptor.h"
-//#include "itkListSampleToHistogramGenerator.h"
-//#include "itkScalarImageToHistogramGenerator.h"
-//#include "itkImageDuplicator.h"
-
 namespace wse {
 
 QSettings *wseGUI::g_settings;
@@ -13,14 +8,11 @@ QSettings *wseGUI::g_settings;
 class InteractorCallback : public vtkCommand 
 {
 private:
-
   wseGUI *wse_;
 
 public:
   InteractorCallback(wseGUI *wse) 
-  {
-    wse_ = wse;
-  }
+  {    wse_ = wse;  }
 
   virtual void Execute(vtkObject *, unsigned long event, void *) 
   {
@@ -39,19 +31,14 @@ public:
 class PickerCallback : public vtkCommand 
 {
 private:
-
   wseGUI *wse_;
 
 public:
   PickerCallback(wseGUI *wse) 
-  {
-    wse_ = wse;
-  }
+  {    wse_ = wse;  }
   
   virtual void Execute(vtkObject *caller, unsigned long eventId, void *callData) 
-  {
-    wse_->pointPick();
-  }
+  {    wse_->pointPick();  }
 };
   
 wseGUI::wseGUI(QWidget *parent, Qt::WFlags flags) :
@@ -60,8 +47,8 @@ wseGUI::wseGUI(QWidget *parent, Qt::WFlags flags) :
   mMinHistogramBins(10),
   mMaxHistogramBins(1000),
   mHistogram(NULL),
-  mSmoothStepThreshold(false),
-  mScaleWidget(QwtScaleDraw::BottomScale, this), mCurrentColorMap(0)
+  mSmoothStepThreshold(false)
+  //  mScaleWidget(QwtScaleDraw::BottomScale, this), mCurrentColorMap(0)
 {
   mIsosurfaceImage = NULL;
   mSliceViewer = SliceViewer::New();
@@ -73,7 +60,11 @@ wseGUI::wseGUI(QWidget *parent, Qt::WFlags flags) :
   //  mScalarMethod = 0;
   mFullScreen = false;
   mPercentageShown = false;
-  mITKFilteringThread =  new itk::QThreadITKFilter<itk::ImageToImageFilter<FloatImage::itkImageType,FloatImage::itkImageType> >;
+
+  mITKFilteringThread  = new 
+    itk::QThreadITKFilter<itk::ImageToImageFilter<FloatImage::itkImageType,FloatImage::itkImageType> >;
+  mITKSegmentationThread =  new 
+    itk::QThreadITKFilter<itk::ImageToImageFilter<FloatImage::itkImageType,ULongImage::itkImageType> >;
 
   this->init();
 }
@@ -81,6 +72,7 @@ wseGUI::wseGUI(QWidget *parent, Qt::WFlags flags) :
 wseGUI::~wseGUI()
 {
   delete mITKFilteringThread;
+  delete mITKSegmentationThread;
 
   if (mImageStack) { delete mImageStack; }
   //mVTKImageViewer->Delete();
@@ -110,7 +102,8 @@ void wseGUI::init()
   // Connect multithreading slots with signals
   connect(mITKFilteringThread,SIGNAL(finished()),this,SLOT(mITKFilteringThread_finished()));
   connect(mITKFilteringThread,SIGNAL(started()),this,SLOT(mITKFilteringThread_started()));
-
+  connect(mITKSegmentationThread,SIGNAL(finished()),this,SLOT(mITKSegmentationThread_finished()));
+  connect(mITKSegmentationThread,SIGNAL(started()),this,SLOT(mITKSegmentationThread_started()));
 }
 
 void wseApplication::loadStyleSheet(const char *fn)
@@ -182,7 +175,7 @@ void wseGUI::setupUI()
 
   // Save volume action
   mExportImageAction = new QAction(tr("Save Volume"), this);
-  connect(mExportImageAction, SIGNAL(triggered()),this,SLOT(unimplemented()));
+  connect(mExportImageAction, SIGNAL(triggered()),this,SLOT(on_saveImageButton_released()));
  
   // mExportColormapAction = new QAction(tr("Export Colormap"), this);
   // mExportColormapAction->setShortcut(tr("Export selected colormaps"));
@@ -220,16 +213,6 @@ void wseGUI::setupUI()
   mIsoSurfaceView = new QAction(tr("Go to &IsoSurface View"), this);
   mIsoSurfaceView->setShortcut((tr("Ctrl+4")));
   connect(mIsoSurfaceView, SIGNAL(triggered()), this, SLOT(setIsoSurfaceView()));
-
-  // mToggleThresholdAction = new QAction(tr("Toggle Threshold Display"), this);
-  // mToggleThresholdAction->setShortcut(Qt::Key_Space);
-  // mToggleThresholdAction->setCheckable(true);
-  // connect(mToggleThresholdAction, SIGNAL(triggered()), this, SLOT(toggleThresholdDisplay()));
-
-  // mTogglePercentageShownAction = new QAction(tr("Toggle Percentage Display"), this);
-  // mTogglePercentageShownAction->setShortcut(tr("Ctrl+S"));
-  // mTogglePercentageShownAction->setCheckable(true);
-  // connect(mTogglePercentageShownAction, SIGNAL(triggered()), this, SLOT(togglePercentageShown()));
 
   // Preferences action
   QAction *prefAction = new QAction(tr("&Preferences..."),this);
@@ -270,8 +253,6 @@ void wseGUI::setupUI()
   viewMenu->addAction(mDualView);
   viewMenu->addAction(mSliceView);
   viewMenu->addAction(mIsoSurfaceView);
-  //  viewMenu->addAction(mToggleThresholdAction);
-  // viewMenu->addAction(mTogglePercentageShownAction);
   viewMenu->addSeparator();
   viewMenu->addAction(mViewDataWindowAction);
   viewMenu->addAction(mViewWatershedWindowAction);
@@ -346,9 +327,12 @@ void wseGUI::setupUI()
  
 
   ui.setIsosurfaceButton->setEnabled(false);
+  ui.setIsosurfaceButton->hide();
+
   ui.setImageDataButton->setEnabled(false);
   ui.setImageMaskButton->setEnabled(false);
- 
+
+  ui.setImageMaskButton->hide();
 
   // ... the color schemes
   for (unsigned int i = 0; i < mColorSchemes.size(); i++)
@@ -366,31 +350,7 @@ void wseGUI::setupUI()
   
   connect(ui.numBinsSpinner, SIGNAL(valueChanged(int)),this, SLOT(numBinsSpinnerChanged(int)));
 
-  // Export page
-  //   ui.exportClassListWidget->setSelectionMode(QAbstractItemView::SingleSelection);
-  //   connect(ui.exportCheckButton, SIGNAL(released()),
-  //           this, SLOT(exportCheckAll()));
-  //   connect(ui.exportUncheckButton, SIGNAL(released()),
-  //           this, SLOT(exportUncheckAll()));
-  //   connect(ui.exportClassListWidget, SIGNAL(itemChanged(QListWidgetItem *)),
-  //           this, SLOT(exportListItemChanged(QListWidgetItem *)));
-  //   connect(ui.exportButton, SIGNAL(released()),
-  //           this, SLOT(exportImage()));
-  
-  //  bool success = connect (ui.histogramSlider_1, SIGNAL(thresholdChanged(double,double)), this, 
-  //  SLOT(thresholdChanged(double,double)));
-  // assert(success);
-
-
-  //  mThresholdTimer.setSingleShot(true);
-  //  connect(&mThresholdTimer, SIGNAL(timeout()), this, SLOT(thresholdTimerEvent()));
-
-  // the scalar schemes
-  // std::vector<ScalarMethod> scalarMethods = ScalarMethod::getScalarMethods();
-  // for (unsigned int i = 0; i < scalarMethods.size(); ++i) {
-  //   ui.scalarMethodComboBox->addItem(QString(scalarMethods[i].name.c_str()));
-  // }
-  //  connect(ui.scalarMethodComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(scalarMethodChanged(int)));
+  connect(ui.histogramSlider_1, SIGNAL(thresholdChanged(double, double)),this,SLOT(histogramThresholdChanged(double,double)));
 
   for (unsigned int i = 0; i < mColorMaps.size(); ++i) {
     ui.colorMapComboBox->addItem(QString(mColorMaps[i].name.c_str()));
@@ -407,10 +367,10 @@ void wseGUI::setupUI()
 
   updateColorMap(); 
 
-  QVBoxLayout *vbox = new QVBoxLayout;
-  vbox->addWidget(&mScaleWidget);
-  vbox->setSpacing(0);
-  vbox->setMargin(0);
+  //  QVBoxLayout *vbox = new QVBoxLayout;
+  // vbox->addWidget(&mScaleWidget);
+  // vbox->setSpacing(0);
+  // vbox->setMargin(0);
   //  ui.colorScaleGroupBox->setLayout(vbox);
 
 
@@ -563,89 +523,11 @@ void wseGUI::setIsosurface()
   }
 }
 
-//-------------------------------------------------------------------------------------
-//
-//-------------------------------------------------------------------------------------
 void wseGUI::closeEvent(QCloseEvent *event)
 {
   writeSettings();
   event->accept();
 }
-
-void wseGUI::saveLayout()
- {
-     QString fileName
-         = QFileDialog::getSaveFileName(this, tr("Save layout"));
-     if (fileName.isEmpty())
-         return;
-     QFile file(fileName);
-     if (!file.open(QFile::WriteOnly)) {
-         QString msg = tr("Failed to open %1\n%2")
-                         .arg(fileName)
-                         .arg(file.errorString());
-         QMessageBox::warning(this, tr("Error"), msg);
-         return;
-     }
-
-     QByteArray geo_data = saveGeometry();
-     QByteArray layout_data = saveState();
-
-     bool ok = file.putChar((uchar)geo_data.size());
-     if (ok)
-         ok = file.write(geo_data) == geo_data.size();
-     if (ok)
-         ok = file.write(layout_data) == layout_data.size();
-
-     if (!ok) {
-         QString msg = tr("Error writing to %1\n%2")
-                         .arg(fileName)
-                         .arg(file.errorString());
-         QMessageBox::warning(this, tr("Error"), msg);
-         return;
-     }
- }
-
-void wseGUI::loadLayout()
- {
-     QString fileName
-         = QFileDialog::getOpenFileName(this, tr("Load layout"));
-     if (fileName.isEmpty())
-         return;
-     QFile file(fileName);
-     if (!file.open(QFile::ReadOnly)) {
-         QString msg = tr("Failed to open %1\n%2")
-                         .arg(fileName)
-                         .arg(file.errorString());
-         QMessageBox::warning(this, tr("Error"), msg);
-         return;
-     }
-
-     uchar geo_size;
-     QByteArray geo_data;
-     QByteArray layout_data;
-
-     bool ok = file.getChar((char*)&geo_size);
-     if (ok) {
-         geo_data = file.read(geo_size);
-         ok = geo_data.size() == geo_size;
-     }
-     if (ok) {
-         layout_data = file.readAll();
-         ok = layout_data.size() > 0;
-     }
-
-     if (ok)
-         ok = restoreGeometry(geo_data);
-     if (ok)
-         ok = restoreState(layout_data);
-
-     if (!ok) {
-         QString msg = tr("Error reading %1")
-                         .arg(fileName);
-         QMessageBox::warning(this, tr("Error"), msg);
-         return;
-     }
- }
 
 void wseGUI::writeSettings()
 {
@@ -785,11 +667,62 @@ void wseGUI::on_imageListWidget_itemSelectionChanged()
   }
 }
 
+void wseGUI::on_saveImageButton_released()
+{
+  if (mImageData == -1) 
+    {
+    QMessageBox::warning(this, tr("WSE"),
+                                   tr("Please select an image volume to save."),
+                                   QMessageBox::Ok);
+    return;
+    }
+
+  // TODO: Suffix recognition is not working properly with
+  // getSaveFileName.  Could this be a problem with Qt? I might need
+  // to manually create a QFileDialog and set it up on my own
+  QString filter = "Volumes (*.nrrd *.dcm *.mhd *.mha)";
+  QString fileName = QFileDialog::getSaveFileName(this, tr("Save Volume"),
+						  g_settings->value("export_path").toString(), 
+						  filter, &filter,0);
+  
+  if (fileName.isEmpty()) return;
+
+  this->output(QString("Saving volume file ") + fileName);
+
+
+  bool ans;
+  QString errStr;
+
+  try 
+    {
+      ans = mImageStack->image(mImageData)->write(fileName);
+    }
+  catch (itk::ExceptionObject &e)
+    {
+      ans = false;
+      errStr = e.GetDescription();
+    }
+    
+  if (ans == false)
+    {
+    QMessageBox::warning(this, tr("WSE"),
+                                   tr("Failed to save image volume.\n" + errStr),
+                                   QMessageBox::Ok);
+    }
+
+
+  QFileInfo fi(fileName);
+  QString path = fi.canonicalPath();
+  if (!path.isNull()) {  g_settings->setValue("export_path", path); }
+
+
+}
+
 void wseGUI::on_addButton_released()
 {
   QStringList files = QFileDialog::getOpenFileNames(this, tr("Import Images"),
                                                     g_settings->value("import_path").toString(), 
-                                                    tr("ImageFiles (*.tif *.png *.jpg *.nrrd *.dcm *.mhd *.mha)"));
+                                                    tr("Volumes (*.nrrd *.dcm *.mhd *.mha)"));
   for (int i = 0; i < files.size(); i++)
   {
     QString imagePath = files.at(i);
@@ -873,7 +806,6 @@ bool wseGUI::addImageFromData(FloatImage *img)
     //    ui.setIsosurfaceButton->setEnabled(true);
     //    ui.setImageMaskButton->setEnabled(true);
     ui.setImageDataButton->setEnabled(true);
-    //    mExportAction->setEnabled(true);
   }
   else
   {
@@ -893,27 +825,39 @@ bool wseGUI::addImageFromFile(QString fname)
 {
   this->output(QString("Loading volume from ") + fname);
 
-  if (mImageStack->addImage(fname))
-  {
-    QListWidgetItem *item = new QListWidgetItem;
+  bool ans = true;  
+  QString errStr;
+  try 
+    {
+      ans = mImageStack->addImage(fname);
+    }
+  catch(itk::ExceptionObject &e)
+    {
+      errStr = e.GetDescription();
+      ans = false;
+    }
 
-    item->setText(mImageStack->selectedName());
-    ui.imageListWidget->insertItem(ui.imageListWidget->count(), item);
-    ui.imageListWidget->setCurrentRow(ui.imageListWidget->count()-1);
-    //    ui.setIsosurfaceButton->setEnabled(true);
-    //    ui.setImageMaskButton->setEnabled(true);
-    ui.setImageDataButton->setEnabled(true);
-    //    mExportAction->setEnabled(true);
-  }
+  if (ans == true)
+    {
+      QListWidgetItem *item = new QListWidgetItem;
+      
+      item->setText(mImageStack->selectedName());
+      ui.imageListWidget->insertItem(ui.imageListWidget->count(), item);
+      ui.imageListWidget->setCurrentRow(ui.imageListWidget->count()-1);
+      //    ui.setIsosurfaceButton->setEnabled(true);
+      //    ui.setImageMaskButton->setEnabled(true);
+      ui.setImageDataButton->setEnabled(true);
+      //    mExportAction->setEnabled(true);
+    }
   else
-  {
-    this->output(QString("Error loading ") + fname);
-    int ret = QMessageBox::warning(this, tr("WSE"),
-                                   tr("There was an error loading image at $1!").arg(fname),
-                                   QMessageBox::Ok);
-    return ret;
-    
-  }
+    {
+      this->output(QString("Error loading ") + fname);
+      int ret = QMessageBox::warning(this, tr("WSE"),
+				     tr("There was an error loading image at $1!\n").arg(fname) + errStr,
+				     QMessageBox::Ok);
+      return ret;
+      
+    }
   QFileInfo fi(fname);
   QString path = fi.canonicalPath();
   if (!path.isNull()) {  g_settings->setValue("import_path", path); }
@@ -922,17 +866,7 @@ bool wseGUI::addImageFromFile(QString fname)
   return true;
 }
 
-void wseGUI::exportListItemChanged(QListWidgetItem *item)
-{
-  //  bool checked = false;
-  //   int numEntries = ui.exportClassListWidget->count();
-  //   ui.exportButton->setEnabled(checked);
-  //   mExportColormapAction->setEnabled(checked);
-}
 
-void wseGUI::exportImage()
-{
-}
 
 void wseGUI::visClassCheckAll()
 {
@@ -1016,13 +950,15 @@ void wseGUI::updateProgress(int p) {
   mProgressBar->setValue(p);
 }
 
-void wseGUI::updateHistogram() {
+void wseGUI::updateHistogram() 
+{
   this->output("Updating the histogram ...");
   
   // If no image data is set, do not update histogram
-  if (mImageData < 0) {
-    return;
-  }
+  if (mImageData < 0) 
+    {
+      return;
+    }
   
   if (this->ui.numBinsSpinner->value() < mMinHistogramBins
       || this->ui.numBinsSpinner->value() > mMaxHistogramBins) {
@@ -1047,8 +983,8 @@ void wseGUI::updateHistogram() {
     mHistogram = new Histogram<FloatImage::itkImageType>(image, numBins);
   }
     
-  ui.lowerThresholdSpinBox->setRange(mHistogram->min(), mHistogram->max());
-  ui.upperThresholdSpinBox->setRange(mHistogram->min(), mHistogram->max());
+  //  ui.lowerThresholdSpinBox->setRange(mHistogram->min(), mHistogram->max());
+  //  ui.upperThresholdSpinBox->setRange(mHistogram->min(), mHistogram->max());
 
   this->output(QString("histogram min, max = %1, %2").arg(mHistogram->min()).arg(mHistogram->max()));
   this->output(QString("histogram mean, stdev = %1, %2").arg(mHistogram->mean()).arg(mHistogram->stdev()));
@@ -1062,10 +998,9 @@ void wseGUI::updateHistogram() {
   updateHistogramBars();
   updateHistogramWidget();
 
-  //  if (mMarkers.size() > 0) 
-  // {
-  //  setThresholdToIntensity(mMarkers[0]);
-  // }
+  // Some conservative threshold values for WS filter
+  ui.histogramSlider_1->setLowerThreshold(.10);
+  ui.histogramSlider_1->setUpperThreshold(.40);
 }
 
 void wseGUI::updateHistogramBars() {
@@ -1549,24 +1484,6 @@ void wseGUI::on_advancedOptionsGroupBox_toggled( bool expanded )
   ui.advancedOptionsGroupBox->setFlat(!expanded);
 }
 
-void wseGUI::toggleThresholdDisplay()
-{
-  if (ui.showThresholdCheckBox->checkState() == Qt::Checked) {
-    ui.showThresholdCheckBox->setCheckState(Qt::Unchecked);
-  } else {
-    ui.showThresholdCheckBox->setCheckState(Qt::Checked);
-  }
-}
-
-
-void wseGUI::togglePercentageShown()
-{
-  mPercentageShown = !mPercentageShown;
-
-  updatePercentageDisplay();
-}
-
-
 void wseGUI::changeSlice( bool direction )
 {
   int slice = this->ui.sliceSelector->value();
@@ -1663,132 +1580,6 @@ void wseGUI::pointPick()
   mSliceViewer->Render();
 }
 
-//void wseGUI::on_lowerThresholdSpinBox_valueChanged( double value )
-//{
-//  setThresholdToIntensity(value, mThresholdUpper);
-//}
-
-//void wseGUI::on_upperThresholdSpinBox_valueChanged( double value )
-//{
-//  setThresholdToIntensity(mThresholdLower, value);
-//}
-
-
-
-// float wseGUI::computePercentForIntensity( float filter_min, float filter_max )
-// {
-//   float percentage;
-//   unsigned long pixelCount;
-//   computePercentForIntensity(filter_min, filter_max, percentage, pixelCount);
-//   return percentage;
-// }
-
-// void wseGUI::computePercentForIntensity( float filter_min, float filter_max, float &percentage, unsigned long &pixelCount )
-// {
-//   int mask_pixels = mHistogram->pixelCount();
-
-
-//   typedef Image::itkFloatImage ImageType;
-//   typedef itk::ImageRegionConstIterator<ImageType> ConstIteratorType;
-//   typedef ImageType::PixelType PixelType;
-
-//   ImageType::Pointer image = mImageStack->image(mImageData)->original();
-//   ImageType::Pointer mask = mImageStack->image(mImageMask)->original();
-
-//   ImageType::SizeType image_size = image->GetLargestPossibleRegion().GetSize();
-//   ImageType::SizeType mask_size = mask->GetLargestPossibleRegion().GetSize();
-
-
-//   ConstIteratorType mit(mask, mask->GetRequestedRegion());
-//   ConstIteratorType it(image, image->GetRequestedRegion());
-//   it.GoToBegin();
-//   mit.GoToBegin();
-//   pixelCount = 0;
-//   double sum = 0;
-//   for( ; !it.IsAtEnd(); ++it)
-//   {
-//     PixelType pixel = it.Get();
-//     if ((mask_size[0] == 0 || mit.Get() != 0) &&
-//       ((pixel > filter_min && pixel < filter_max))) 
-//     {
-//       pixelCount++;
-//     }
-//     if (mask_size[0] != 0) ++mit;
-//   }
-
-
-
-//   percentage = (float)pixelCount / (float)mask_pixels * 100.0f;
-// }
-
-
-
-
-
-
-
-// float wseGUI::cmdLineComputeIntensity( std::string data, std::string mask, float percent )
-// {
-//   addImageFromFile(QString(data.c_str()));
-//   addImageFromFile(QString(mask.c_str()));
-
-//   mImageData = 0;
-//   mImageMask = 1;
-
-//   updateImageDisplay();
-
-//   //std::cout << "total pixel count    : " <<  mHistogram->pixelCount() << "\n";
-//   std::cout << mHistogram->pixelCount() << ";";
-
-//   float intensity = mHistogram->max();
-//   float computed_percent = 0.0f;
-//   unsigned long pixel_count;
-//   while (computed_percent < percent && intensity > mHistogram->min()) {
-//     intensity--;
-//     computePercentForIntensity(intensity, mHistogram->max(), computed_percent, pixel_count);
-//   }
-
-//   std::cout << pixel_count << ";";
-
-
-//   return intensity;
-// }
-
-// float wseGUI::cmdLineComputePercentage( std::string data, std::string mask, float intensity )
-// {
-//   addImageFromFile(QString(data.c_str()));
-//   addImageFromFile(QString(mask.c_str()));
-
-//   mImageData = 0;
-//   mImageMask = 1;
-
-//   updateImageDisplay();
-
-
-//   std::cout << mHistogram->pixelCount() << ";";
-
-//   float computed_percent = 0.0f;
-//   unsigned long pixel_count;
-//   computePercentForIntensity(intensity, mHistogram->max(), computed_percent, pixel_count);
-//   std::cout << pixel_count << ";";
-
-//   return computed_percent;
-// }
-
-void wseGUI::updatePercentageDisplay()
-{
-  if (mPercentageShown) 
-    {
-      ui.percentageLineEdit->setEnabled(true);
-      ui.percentageLineEdit->setText(mPercentageString);
-    } 
-  else 
-    {
-      ui.percentageLineEdit->setEnabled(false);
-      ui.percentageLineEdit->setText("Show with " + QString(QKeySequence(Qt::CTRL + Qt::Key_S)));
-    }
-}
-
 void wseGUI::on_gaussianRadioButton_toggled(bool on)
 {
 
@@ -1802,7 +1593,6 @@ void wseGUI::on_gaussianRadioButton_toggled(bool on)
       // Hide the gaussian controls
       ui.gaussianBlurringParamsBox->hide();
     }
-
 }
 
 void wseGUI::on_anisotropicRadioButton_toggled(bool on)
@@ -1845,7 +1635,7 @@ void wseGUI::on_executeDenoisingButton_accepted()
     }
   
   // Are we processing?
-  if (mITKFilteringThread->isFiltering())
+  if (mITKFilteringThread->isFiltering() || mITKSegmentationThread->isFiltering())
     {
       QMessageBox::warning(this, "WSE", QString("Please wait until the current filtering operation has finished."));
       return;
@@ -1867,13 +1657,33 @@ void wseGUI::on_executeGradientButton_accepted()
     }
   
   // Are we processing?
-  if (mITKFilteringThread->isFiltering())
+  if (mITKFilteringThread->isFiltering() || mITKSegmentationThread->isFiltering())
     {
       QMessageBox::warning(this, "WSE", QString("Please wait until the current filtering operation has finished."));
       return;
     }
   
   this->runGradientFiltering();
+}
+
+void wseGUI::on_executeWatershedsButton_accepted()
+{
+  // No image data selected.
+  // TODO: Add message boxes for errors
+  if (ui.watershedInputComboBox->currentIndex() == -1) 
+    {
+      QMessageBox::warning(this, "WSE", QString("Please select image data first."));
+      return;
+    }
+  
+  // Are we processing?
+  if (mITKFilteringThread->isFiltering() || mITKSegmentationThread->isFiltering())
+    {
+      QMessageBox::warning(this, "WSE", QString("Please wait until the current filtering operation has finished."));
+      return;
+    }
+  
+  this->runWatershedSegmentation();
 }
 
 } // end namespace

@@ -2,6 +2,18 @@
 
 namespace wse {
 
+void wseGUI::mITKFilteringThread_started()
+{ 
+  // Hook up to itk progress event
+  itk::wseITKCallback<wseGUI>::Pointer mycmd = itk::wseITKCallback<wseGUI>::New();
+  mycmd->setGui(this);
+  mITKFilteringThread->filter()->AddObserver(itk::ProgressEvent(), mycmd);
+  
+  // Show progress bar
+  ui.progressBar->setValue(0);
+  ui.progressBar->show();
+}
+
 void wseGUI::mITKFilteringThread_finished()
 {     
   ui.progressBar->setValue(100);
@@ -10,39 +22,46 @@ void wseGUI::mITKFilteringThread_finished()
     {
       QMessageBox::warning(this, tr("Filtering aborted"), mITKFilteringThread->errorString());
       this->output("Filter operation aborted by user");
+      return;
     }  
   this->output("Filtering operation finished");
 
+  FloatImage *img = new FloatImage(mITKFilteringThread->filter()->GetOutput());
+  img->name(mITKFilteringThread->description());
+  this->addImageFromData(img);
+
+  // Switch view to the last image loaded
+  this->on_setImageDataButton_released();
 }
   
-void wseGUI::mITKFilteringThread_started()
+void wseGUI::mITKSegmentationThread_started()
 { 
   // Hook up to itk progress event
   itk::wseITKCallback<wseGUI>::Pointer mycmd = itk::wseITKCallback<wseGUI>::New();
-  // wseITKCallback *mycmd = new wseITKCallback();
-  mycmd->setGui(this);
-    
-  //    cmd->SetCallback(&mITKFilteringThread_progress);
-  mITKFilteringThread->filter()->AddObserver(itk::ProgressEvent(), mycmd);
+  mycmd->setGui(this);    
+  mITKSegmentationThread->filter()->AddObserver(itk::ProgressEvent(), mycmd);
   
+  // Show progress bar
   ui.progressBar->setValue(0);
   ui.progressBar->show();
 }
-  
-void wseGUI::mITKFilteringThread_progress(itk::Object *caller, const itk::EventObject& event)
-{
-  itk::ProcessObject *processObject = (itk::ProcessObject*)caller;
-  if (typeid(event) == typeid(itk::ProgressEvent)) 
-    {
-      //  std::cout << "ITK Progress event received from "
-      //		<< processObject->GetNameOfClass() << ". Progress is "
-      //		<< 100.0 * processObject->GetProgress() << " %."
-      //	<< std::endl;
-      ui.progressBar->setValue(100.0 * processObject->GetProgress());
-    }
-}
-  
 
+void wseGUI::mITKSegmentationThread_finished()
+{     
+  ui.progressBar->setValue(100);
+  ui.progressBar->hide();
+  if (mITKSegmentationThread->errorFlag() == true)
+    {
+      QMessageBox::warning(this, tr("Segmentation aborted"), mITKSegmentationThread->errorString());
+      this->output("Filter operation aborted by user");
+    }  
+  this->output("Segmentation operation finished");
+
+  Segmentation *seg = new Segmentation(mITKSegmentationThread->filter()->GetOutput(),
+				       dynamic_cast<itk::WatershedImageFilter<FloatImage::itkImageType> *>(mITKSegmentationThread->filter().GetPointer())->GetSegmentTree());
+
+}
+    
 void wseGUI::runGaussianFiltering()
 {
   this->output(QString("Starting Gaussian filtering with sigma %1").arg(ui.smoothingSigmaInputBox->value()));
@@ -53,13 +72,12 @@ void wseGUI::runGaussianFiltering()
   filter->SetVariance(ui.smoothingSigmaInputBox->value() * ui.smoothingSigmaInputBox->value());
   filter->SetUseImageSpacingOff();
   
-  // MULTITHREADING:
+  // MULTITHREADING: Pass the filter object and a description to the
+  // QThread object.  The description will be used later to create GUI
+  // menu entries for the output of the filtering.
   mITKFilteringThread->setFilter(filter);
+  mITKFilteringThread->setDescription(mImageStack->name(ui.denoisingInputComboBox->currentIndex()) + QString(" (gaussian)"));
   mITKFilteringThread->start();
-  
-  FloatImage *img = new FloatImage(filter->GetOutput());
-  img->name(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->name() + QString(" (gaussian blur)"));
-  this->addImageFromData(img);
 }
 
 void wseGUI::runAnisotropicFiltering()
@@ -73,15 +91,13 @@ void wseGUI::runAnisotropicFiltering()
   filter->SetTimeStep(0.062);
   filter->SetNumberOfIterations(ui.iterationsSpinBox->value());
   
-  // MULTITHREADING:
+  // MULTITHREADING: Pass the filter object and a description to the
+  // QThread object.  The description will be used later to create GUI
+  // menu entries for the output of the filtering.
   mITKFilteringThread->setFilter(filter);
+  mITKFilteringThread->setDescription(mImageStack->name(ui.denoisingInputComboBox->currentIndex()) + QString(" (classic anisotropic)"));
   mITKFilteringThread->start();
-  
-  FloatImage *img = new FloatImage(filter->GetOutput());
-  img->name(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->name() + QString(" (classic anisotropic)"));
-  this->addImageFromData(img);
 }
-
 
 void wseGUI::runCurvatureFiltering()
 {
@@ -95,13 +111,12 @@ void wseGUI::runCurvatureFiltering()
   filter->SetTimeStep(0.062);
   filter->SetNumberOfIterations(ui.iterationsSpinBox->value());
   
-  // MULTITHREADING:
+  // MULTITHREADING: Pass the filter object and a description to the
+  // QThread object.  The description will be used later to create GUI
+  // menu entries for the output of the filtering.
   mITKFilteringThread->setFilter(filter);
+  mITKFilteringThread->setDescription(mImageStack->name(ui.denoisingInputComboBox->currentIndex()) + QString(" (curvature anisotropic)"));
   mITKFilteringThread->start();
-  
-  FloatImage *img = new FloatImage(filter->GetOutput());
-  img->name(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->name() + QString(" (curvature anisotropic)"));
-  this->addImageFromData(img);
 }
 
 void wseGUI::runGradientFiltering()
@@ -110,19 +125,33 @@ void wseGUI::runGradientFiltering()
 
   itk::GradientMagnitudeImageFilter<FloatImage::itkImageType, FloatImage::itkImageType>::Pointer filter = 
     itk::GradientMagnitudeImageFilter<FloatImage::itkImageType, FloatImage::itkImageType>::New();
-  filter->SetInput(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->itkImage());
+  filter->SetInput(mImageStack->image(ui.gradientInputComboBox->currentIndex())->itkImage());
   filter->SetUseImageSpacingOff();
-  
-  // MULTITHREADING:
+ 
+  // MULTITHREADING: Pass the filter object and a description to the
+  // QThread object.  The description will be used later to create GUI
+  // menu entries for the output of the filtering.
   mITKFilteringThread->setFilter(filter);
+  mITKFilteringThread->setDescription(mImageStack->name(ui.gradientInputComboBox->currentIndex()) + QString(" (gradient)"));
   mITKFilteringThread->start();
-  
-  FloatImage *img = new FloatImage(filter->GetOutput());
-  img->name(mImageStack->image(ui.denoisingInputComboBox->currentIndex())->name() + QString(" (grad. magnitude)"));
-  this->addImageFromData(img);
 }
 
+void wseGUI::runWatershedSegmentation()
+{
+ this->output(QString("Running the watershed segmentation filter."));
 
-
+ itk::WatershedImageFilter<FloatImage::itkImageType>::Pointer filter = 
+   itk::WatershedImageFilter<FloatImage::itkImageType>::New();
+ filter->SetInput(mImageStack->image(ui.watershedInputComboBox->currentIndex())->itkImage());
+ filter->SetThreshold(ui.histogramSlider_1->getLowerThreshold());
+ filter->SetLevel(ui.histogramSlider_1->getUpperThreshold());
+ 
+ // MULTITHREADING: Pass the filter object and a description to the
+ // QThread object.  The description will be used later to create GUI
+ // menu entries for the output of the filtering.
+ mITKSegmentationThread->setFilter(filter);
+ mITKSegmentationThread->setDescription(mImageStack->name(ui.watershedInputComboBox->currentIndex()) + QString(" (watershed transform)"));
+ mITKSegmentationThread->start();
+}
 
 } //end namespace wse

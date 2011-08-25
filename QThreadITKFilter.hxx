@@ -81,7 +81,7 @@ class ITK_EXPORT QThreadITKFilter : public QThread
   {
     mMutex.lock();
     mFiltering = true;
-    mErrorFlag  = false;
+    mErrorFlag = false;
 
     try
       {
@@ -126,11 +126,25 @@ class ITK_EXPORT QThreadITKFilter : public QThread
   const QString &errorString() const
   { return mErrorString; }
 
+  /** Sets a description string for this threaded operation. */
+  void setDescription(const QString &s)
+  {
+    mMutex.lock();
+    mDescription = s; 
+    mMutex.unlock();
+  }
+
+  /** Returns a descriptive string set by the setDescription
+      method. */
+  const QString &description() const
+  { return mDescription; }
+  
  private:
   typename itkfilter::Pointer mFilter;
   bool mFiltering;
   bool mErrorFlag;
   QString mErrorString;
+  QString mDescription;
   QMutex mMutex;
 
 }; // end class

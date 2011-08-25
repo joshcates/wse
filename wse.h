@@ -61,6 +61,7 @@
 #include "itkGradientAnisotropicDiffusionImageFilter.h"
 #include "itkCurvatureAnisotropicDiffusionImageFilter.h"
 #include "itkGradientMagnitudeImageFilter.h"
+#include "itkWatershedImageFilter.h"
 
 // WSE includes
 #include "wseImage.hxx"
@@ -72,11 +73,12 @@
 #include "SliceViewer.h"
 //#include "IsoRenderer.h"
 #include "wseUtils.h"
+#include "wseSegmentation.h"
 
 // QWT includes
-#include "qwt_color_map.h"
-#include "qwt_scale_widget.h"
-#include "qwt_scale_engine.h"
+//#include "qwt_color_map.h"
+//#include "qwt_scale_widget.h"
+//#include "qwt_scale_engine.h"
 
 //#include "IsoRenderer.h"
 
@@ -130,6 +132,7 @@ class wseGUI : public QMainWindow
   
 public:
   typedef FloatImage::itkImageType itkImageType;
+
   wseGUI(QWidget *parent = 0, Qt::WFlags flags = 0);
   ~wseGUI();
   
@@ -149,10 +152,6 @@ public slots:
 
   void importDelete();
   void imageDropped(QString);
-  void exportListItemChanged(QListWidgetItem *item);
-  void exportImage();
-  void saveLayout();
-  void loadLayout();
   void visClassCheckAll();
   void visClassUncheckAll();
   void visImageCheckAll();
@@ -169,14 +168,12 @@ public slots:
   void numBinsSpinnerChanged(int n);
   void thresholdChanged(double lowerRatio, double upperRatio);
 
-  //  void thresholdTimerEvent();
+  /** Arrange the GUI windows in several preset ways. */
   void toggleFullScreen();
   void setNormalView();
   void setDualView();
   void setSliceView();
   void setIsoSurfaceView();
-  void toggleThresholdDisplay();
-  void togglePercentageShown();
   void pointPick();
 
   void changeSlice(bool direction);
@@ -200,46 +197,11 @@ public slots:
   /** */  
   void colorMapChanged(int m);
 
+protected:
+  /** Overrides the wheelEvent to move slices with the mousewheel */
+  void wheelEvent(QWheelEvent *event);
+
 private:
-  void output(const char *s)  
-  {  
-    ui.outputConsole->append(QTime::currentTime().toString() + QString("> ") + QString(s)); 
-    ui.outputConsole->update();
-    QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-
-  }
-  void output(const QString &s)  
-  { 
-    ui.outputConsole->append(QTime::currentTime().toString() + QString("> ") + s);  
-    ui.outputConsole->update();
-    QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-  }
-  void output(const std::string &s)  
-  { 
-    ui.outputConsole->append(QTime::currentTime().toString() + QString("> ") + QString(s.c_str()) );  
-    ui.outputConsole->update();
-    QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
-
-  }
-
-  void setupUI();
-  void setupWatershedWindowUI();
-  void readSettings();
-  void writeSettings();
-  void redrawIsoSurface();
-  void updateHistogramWidget();
-  void updateHistogramBars();
-  void updatePercentageDisplay();
-
-  void showStatusMessage(const QString &text, int timeout = 0);
-
-  void setMouseHandling();
-
-  void updateColorMap();
-
-  // float computePercentForIntensity(float lower, float upper);
-  // void computePercentForIntensity(float lower, float upper, float &percentage, unsigned long &pixelCount);
-
   /** The main user interface class */
   Ui::WSEClass ui;
 
@@ -248,14 +210,11 @@ private:
   QAction *mImportImageAction;
   QAction *mImportWSSegmentationAction;
   //  QAction *mExportColormapAction;
-
   QAction *mFullScreenAction;
   QAction *mNormalView;
   QAction *mDualView;
   QAction *mSliceView;
   QAction *mIsoSurfaceView;
-  //  QAction *mToggleThresholdAction;
-  // QAction *mTogglePercentageShownAction;
   QAction *mViewControlWindowAction;
   QAction *mViewDataWindowAction;
   QAction *mViewWatershedWindowAction;
@@ -277,15 +236,25 @@ private:
   /** The class that computes and stores a histogram from an ITK image */
   Histogram<itkImageType> *mHistogram;
 
+  /** TODO: Document */
   bool mSmoothStepThreshold;
-  QwtScaleWidget mScaleWidget;
+
+  /** TODO: Document */
+  //  QwtScaleWidget mScaleWidget;
+
+  /** TODO: Document */
   int mCurrentColorMap;
 
+  /** The main progress bar for the GUI.  */
   QProgressBar *mProgressBar;
 
+  /** TODO: Document */
   SliceViewer *mSliceViewer;
+
+  /** TODO: Document */
   vtkImageData *mNullVTKImageData;
 
+  /** TODO: Document */
   vtkActor *mCrosshairActor;
   
   //  IsoRenderer *mIsoRenderer;
@@ -296,36 +265,145 @@ private:
   /** This list of combo boxes is kept in sync with the master list of images from ui.imageListWidget. */
   std::vector<QComboBox *> mRegisteredSegmentationComboBoxes;
 
+  /** TODO: Document */
   int mIsosurfaceImage;
+
+  /** The integer number of the image in the mImageStack that is
+      currently displayed.  If this number is -1, no image is being
+      displayed. */
   int mImageData;
+
+  /** TODO: Document */
   int mImageMask;  
+
+  /** TODO: Document */
   colorSchemes mColorSchemes;
+
+  /** TODO: Document */
   colorMaps mColorMaps;
 
-
-  QString mPercentageString;
-
+  /** TODO: Document */
   InteractorCallback *mVTKCallback;
+
+  /** TODO: Document */
   vtkPointPicker *mPointPicker;
 
+  /** TODO: Document */
   bool mPercentageShown;
+
+  /** TODO: Document */
   bool mFullScreen;
 
-
+  /** TODO: Document */
   std::vector<int> mPoints;
-  //  std::vector<float> mMarkers;
-  //  std::vector<double> mPercentages;
 
+  /** TODO: Document */
   float mThresholdLower;
+
+  /** TODO: Document */
   float mThresholdUpper;
 
-  //  QTimer mThresholdTimer;
-  
-  QwtLinearColorMap mColorMap;
+  /** TODO: Document */
+  //  QwtLinearColorMap mColorMap;
+
+  /** The threading object for image-to-image filters. TODO: Redefine
+      the ThreadITKFilter to handle both of these image filters in one
+      object. */
+  itk::QThreadITKFilter<itk::ImageToImageFilter<FloatImage::itkImageType,FloatImage::itkImageType> > 
+    *mITKFilteringThread;
+
+  /** The threading object for image-to-segmentation filters. TODO:
+      Redefine the ThreadITKFilter to handle both of these image
+      filters in one object. */
+  itk::QThreadITKFilter<itk::ImageToImageFilter<FloatImage::itkImageType,ULongImage::itkImageType> > 
+    *mITKSegmentationThread;
+
+  /** Perform Gaussian filtering on a selected image. */
+  void runGaussianFiltering();
+
+  /** Perform Anisotropic Diffusion filtering on a selected image. */
+  void runAnisotropicFiltering();
+
+  /** Perform Curvature Anisotropic Diffusion filtering on a selected image. */
+  void runCurvatureFiltering();
+
+  /** Run the gradient magnitude image filter. */
+  void runGradientFiltering();
+
+  /** Run the watershed segmentation filter */
+  void runWatershedSegmentation();
+
+  /** Requests termination of filtering operations. */
+  void requestAbortITKFilter()
+  {
+    if ( mITKFilteringThread->isFiltering() ) 
+      {  mITKFilteringThread->filter()->SetAbortGenerateData(true); }
+    if ( mITKSegmentationThread->isFiltering() ) 
+      {  mITKSegmentationThread->filter()->SetAbortGenerateData(true); }
+  }
+
+  /** Write a string to the console output window. */
+  void output(const char *s)  
+  {  
+    ui.outputConsole->append(QTime::currentTime().toString() + QString("> ") + QString(s)); 
+    ui.outputConsole->update();
+    QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+
+  }
+  void output(const QString &s)  
+  { 
+    ui.outputConsole->append(QTime::currentTime().toString() + QString("> ") + s);  
+    ui.outputConsole->update();
+    QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+  }
+  void output(const std::string &s)  
+  { 
+    ui.outputConsole->append(QTime::currentTime().toString() + QString("> ") + QString(s.c_str()) );  
+    ui.outputConsole->update();
+    QApplication::processEvents(QEventLoop::ExcludeUserInputEvents);
+
+  }
+
+  /** Perform the initial setup of the user interface */
+  void setupUI();
+
+  /** Perform the initial setup of the watershed filtering GUI window. */
+  void setupWatershedWindowUI();
+
+  /** Read the user interface settings from disk. */
+  void readSettings();
+
+  /** Write the user interface settings to disk. */
+  void writeSettings();
+
+  /** TODO: Document. */
+  void redrawIsoSurface();
+
+  /** TODO: Document. */
+  void updateHistogramWidget();
+
+  /** TODO: Document. */
+  void updateHistogramBars();
+
+  /** Show a message in the status bar. */
+  void showStatusMessage(const QString &text, int timeout = 0);
+
+  /** TODO: Document. */
+  void setMouseHandling();
+
+  /** TODO: Document. */
+  void updateColorMap();
 
 private slots:
   void unimplemented()
   {  QMessageBox::warning(this, tr("Sorry"), QString("This function is not yet implemented."));  }
+
+  /** Slots for histogram signals */
+  void histogramThresholdChanged(double l, double h)
+  {
+    ui.lowerThresholdLabel->setText(QString("%1\%").arg(l*100.0,0,'g',4));
+    ui.upperThresholdLabel->setText(QString("%1\%").arg(h*100.0,0,'g',4));
+  }
 
   /** Slots for the watersheds denoising interface. */
   void on_gaussianRadioButton_toggled(bool);
@@ -337,11 +415,15 @@ private slots:
   void on_executeGradientButton_accepted();
   void on_executeGradientButton_rejected()
   { this->requestAbortITKFilter(); };
-
+  void on_executeWatershedsButton_accepted();
+  void on_executeWatershedsButton_rejected()
+  { this->requestAbortITKFilter(); };
+  
   /** Slots for the Data Manager window */
   void on_imageListWidget_itemSelectionChanged();
   void on_setImageDataButton_released();
   void on_addButton_released();
+  void on_saveImageButton_released();
 
   void on_clipThresholdCheckBox_stateChanged(int );
   void on_thresholdOpacitySlider_valueChanged(int value);
@@ -370,37 +452,10 @@ private slots:
   // Won't connect automatically
   void mITKFilteringThread_finished();
   void mITKFilteringThread_started();
-  void mITKFilteringThread_progress(itk::Object *caller, const itk::EventObject& event);
+  void mITKSegmentationThread_finished();
+  void mITKSegmentationThread_started();
 
-  // void on_lowerThresholdSpinBox_valueChanged(double);
-  // void on_upperThresholdSpinBox_valueChanged(double);
-
-protected:
-  // override the wheelEvent to move slices with the mousewheel
-  void wheelEvent(QWheelEvent *event);
-
- private:
-  itk::QThreadITKFilter<itk::ImageToImageFilter<FloatImage::itkImageType,FloatImage::itkImageType> > *mITKFilteringThread;
-
-  /** Perform Gaussian filtering on a selected image. */
-  void runGaussianFiltering();
-
-  /** Perform Anisotropic Diffusion filtering on a selected image. */
-  void runAnisotropicFiltering();
-
-  /** Perform Curvature Anisotropic Diffusion filtering on a selected image. */
-  void runCurvatureFiltering();
-
-  /** Run the gradient magnitude image filter. */
-  void runGradientFiltering();
-
-  /** Requests termination of filtering operations. */
-  void requestAbortITKFilter()
-  {
-    if ( mITKFilteringThread->isFiltering() ) {  mITKFilteringThread->filter()->SetAbortGenerateData(true); }
-  }
-
-};
+}; // end class wseGUI
 
 } // end namespace wse
 

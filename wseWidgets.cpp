@@ -31,10 +31,6 @@ bool QImageList::dropMimeData(int index, const QMimeData *data, Qt::DropAction a
   return true;
 }
 
-
-//-------------------------------------------------------------------------------------
-//
-//-------------------------------------------------------------------------------------
 QPreviewScene::QPreviewScene(QWidget *parent) :
   QGraphicsScene(parent),
   mBackground(NULL)
@@ -43,9 +39,6 @@ QPreviewScene::QPreviewScene(QWidget *parent) :
   mBackground->setOffset(0,0);
 }
 
-//---------------------------------------------------------------------------
-//
-//---------------------------------------------------------------------------
 void QPreviewScene::setBackground(const QImage &bg) 
 {
   mBackground->setPixmap(QPixmap::fromImage(bg));
@@ -54,32 +47,20 @@ void QPreviewScene::setBackground(const QImage &bg)
   setSceneRect(QRectF(0,0,bg.width(),bg.height()));
 }
 
-
-//-------------------------------------------------------------------------------------
-//
-//-------------------------------------------------------------------------------------
 void QPreviewScene::dragEnterEvent(QGraphicsSceneDragDropEvent *event)
 {
-  const QMimeData *m = event->mimeData();
+  //  const QMimeData *m = event->mimeData();
   if (event->mimeData()->hasUrls())
     event->acceptProposedAction();
 }
 
-
-
-//-------------------------------------------------------------------------------------
-//
-//-------------------------------------------------------------------------------------
 void QPreviewScene::dragMoveEvent(QGraphicsSceneDragDropEvent *event)
 {
-  const QMimeData *m = event->mimeData();
+  // const QMimeData *m = event->mimeData();
   if (event->mimeData()->hasUrls())
     event->acceptProposedAction();
 }
 
-//-------------------------------------------------------------------------------------
-//
-//-------------------------------------------------------------------------------------
 void QPreviewScene::dropEvent(QGraphicsSceneDragDropEvent *event)
 {
   if (event->mimeData()->hasUrls())
@@ -94,20 +75,12 @@ void QPreviewScene::dropEvent(QGraphicsSceneDragDropEvent *event)
   event->acceptProposedAction();
 }
 
-
-//---------------------------------------------------------------------------
-//
-//---------------------------------------------------------------------------
 void QPreviewScene::mousePressEvent(QGraphicsSceneMouseEvent *e)
 {
   QGraphicsScene::mousePressEvent(e);
   emit imagePicked(int(e->scenePos().x()), int(e->scenePos().y()));
 }
 
-
-//---------------------------------------------------------------------------
-//
-//---------------------------------------------------------------------------
 QPreviewWidget::QPreviewWidget(QWidget *parent) :
   QGraphicsView(parent)
 {
@@ -122,18 +95,12 @@ QPreviewWidget::QPreviewWidget(QWidget *parent) :
   show();
 }
 
-//---------------------------------------------------------------------------
-//
-//---------------------------------------------------------------------------
 void QPreviewWidget::resizeEvent(QResizeEvent *event)
 {
   QGraphicsView::resizeEvent(event);
   fitInView(0,0,mScene->width(),mScene->height(), Qt::KeepAspectRatio);
 }
 
-//---------------------------------------------------------------------------
-//
-//---------------------------------------------------------------------------
 void QPreviewWidget::setBackground(const QImage &bg) 
 {
   mScene->setBackground(bg);

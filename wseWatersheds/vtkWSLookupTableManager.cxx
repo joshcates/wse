@@ -266,6 +266,35 @@ void vtkWSLookupTableManager::Initialize()
   this->ComputedEquivalencyList= 0;
 }
 
+void vtkWSLookupTableManager::LoadTree(SegmentTreeType::Pointer tree)
+{
+  // Read list size
+  unsigned long listsz = tree->Size();
+
+  // Allocate merge list
+  if (this->MergeList != 0) delete[] this->MergeList;
+  this->MergeList = new merge_t[listsz + 2];
+
+
+  SegmentTreeType::Iterator it;
+  it = tree->Begin();
+
+  // Copy the merge data
+  for (unsigned int i = 0; i < listsz; i++, it++)
+   {      MergeList[i+1] = *it;   }
+
+  // set current position to beginning of list & reset threshold
+  this->CurrentPositionPointer = this->MergeList + 1;
+  this->CurrentThreshold       = 0.0;
+
+  // set the maximum saliency
+  this->MaximumSaliency = (this->MergeList + listsz)->saliency;
+
+  // mark the first and last (empty) elements
+  (this->MergeList + listsz + 1)->saliency = -2.0; // end
+  this->MergeList->saliency = -1.0; // start  
+}
+
 void vtkWSLookupTableManager::LoadTreeFile(const char* fn)
 {
   ifstream in(fn, ios::binary);

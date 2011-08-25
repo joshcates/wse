@@ -20,15 +20,14 @@
 #include "itk_hash_map.h"
 #include <list>
 
-struct merge_t
-{
-  unsigned long from;
-  unsigned long to;
-  float saliency;
-};
+//struct merge_t
+//{
+//  unsigned long from;
+//  unsigned long to;
+//  float saliency;
+//};
 
-
-typedef std::list<merge_t> merge_list_t;
+//typedef std::list<merge_t> merge_list_t;
 
 typedef std::list<unsigned long> unsigned_long_list_t;
 class ITK_EXPORT vtkLookupTableEquivalencyHash

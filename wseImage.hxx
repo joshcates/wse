@@ -367,7 +367,7 @@ bool Image<T>::isBinarySegmentation()
 
 // Define some standard types.
 typedef Image<float> FloatImage;
-typedef Image<unsigned long> ULongImage;
+typedef Image<unsigned long int> ULongImage;
  
 } // end namespace wse
 #endif

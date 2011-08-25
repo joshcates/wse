@@ -38,7 +38,6 @@
 #include <algorithm>
 
 
-//#include <wseCore/Math/MathFunctions.h>
 namespace wseCore {
   template< class T >
   inline T Clamp( T value, T min, T max )
@@ -52,8 +51,6 @@ namespace wseCore {
     return ( value < T( 0 ) ) ? -value : value;
   }
 }
-//#include <wseCore/Math/MathFunctions.h>
-
 
 
 // Interface includes
