@@ -147,6 +147,9 @@ public:
 
   QProgressBar *getProgressBar() { return ui.progressBar; }
 
+  /** */
+  void showStartMenu()  { this->on_addButton_released(); }
+
 public slots:
   void visualizePage();
 
@@ -226,6 +229,13 @@ private:
   
   /** The stack of image volumes in memory */
   FloatImageStack *mImageStack;
+
+  /** The watershed segmentation.  This object is NULL if no
+      segmentation exists. This version of wse only supports one
+      segmentation at a time.*/
+  Segmentation *mSegmentation;
+
+  /** */
 
   /** */
   int mMinHistogramBins;

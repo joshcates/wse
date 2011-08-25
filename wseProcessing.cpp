@@ -57,9 +57,13 @@ void wseGUI::mITKSegmentationThread_finished()
     }  
   this->output("Segmentation operation finished");
 
-  Segmentation *seg = new Segmentation(mITKSegmentationThread->filter()->GetOutput(),
-				       dynamic_cast<itk::WatershedImageFilter<FloatImage::itkImageType> *>(mITKSegmentationThread->filter().GetPointer())->GetSegmentTree());
-
+  // First clean up old segmentation
+  if (mSegmentation != NULL) { delete mSegmentation; }
+   
+  // Create the segmentation object.
+  mSegmentation = new Segmentation(mITKSegmentationThread->filter()->GetOutput(),
+				   dynamic_cast<itk::WatershedImageFilter<FloatImage::itkImageType> *>
+				   (mITKSegmentationThread->filter().GetPointer())->GetSegmentTree());
 }
     
 void wseGUI::runGaussianFiltering()
@@ -138,20 +142,40 @@ void wseGUI::runGradientFiltering()
 
 void wseGUI::runWatershedSegmentation()
 {
- this->output(QString("Running the watershed segmentation filter."));
-
- itk::WatershedImageFilter<FloatImage::itkImageType>::Pointer filter = 
-   itk::WatershedImageFilter<FloatImage::itkImageType>::New();
- filter->SetInput(mImageStack->image(ui.watershedInputComboBox->currentIndex())->itkImage());
- filter->SetThreshold(ui.histogramSlider_1->getLowerThreshold());
- filter->SetLevel(ui.histogramSlider_1->getUpperThreshold());
- 
- // MULTITHREADING: Pass the filter object and a description to the
- // QThread object.  The description will be used later to create GUI
- // menu entries for the output of the filtering.
- mITKSegmentationThread->setFilter(filter);
- mITKSegmentationThread->setDescription(mImageStack->name(ui.watershedInputComboBox->currentIndex()) + QString(" (watershed transform)"));
- mITKSegmentationThread->start();
+  this->output("Running the watershed segmentation filter");
+  
+  // Warn the user if we are about to delete any existing segmentation
+  // data.  (Data is not actually deleted until successful completion
+  // of the QThread run
+  if (mSegmentation != NULL)
+    {
+      QMessageBox msgBox;
+      msgBox.setIcon(QMessageBox::Warning);
+      msgBox.setText("This operation will delete your current watershed segmentation. You will lose any unsaved data.");
+      msgBox.setInformativeText("Do you want to proceed?");
+      msgBox.setStandardButtons(QMessageBox::Cancel | QMessageBox::Yes);
+      msgBox.setDefaultButton(QMessageBox::Cancel);
+      int ret = msgBox.exec();
+      
+      if (ret == QMessageBox::Cancel)
+	{
+	  this->output("Cancelled the watershed segmentation filter.");
+	  return;
+	}
+    } // end if mSegmentation != NULL
+  
+  itk::WatershedImageFilter<FloatImage::itkImageType>::Pointer filter = 
+    itk::WatershedImageFilter<FloatImage::itkImageType>::New();
+  filter->SetInput(mImageStack->image(ui.watershedInputComboBox->currentIndex())->itkImage());
+  filter->SetThreshold(ui.histogramSlider_1->getLowerThreshold());
+  filter->SetLevel(ui.histogramSlider_1->getUpperThreshold());
+  
+  // MULTITHREADING: Pass the filter object and a description to the
+  // QThread object.  The description will be used later to create GUI
+  // menu entries for the output of the filtering.
+  mITKSegmentationThread->setFilter(filter);
+  mITKSegmentationThread->setDescription(mImageStack->name(ui.watershedInputComboBox->currentIndex()) + QString(" (watershed transform)"));
+  mITKSegmentationThread->start();
 }
 
 } //end namespace wse

@@ -50,6 +50,7 @@ wseGUI::wseGUI(QWidget *parent, Qt::WFlags flags) :
   mSmoothStepThreshold(false)
   //  mScaleWidget(QwtScaleDraw::BottomScale, this), mCurrentColorMap(0)
 {
+  mSegmentation = NULL;
   mIsosurfaceImage = NULL;
   mSliceViewer = SliceViewer::New();
   mNullVTKImageData = vtkImageData::New();
@@ -73,6 +74,7 @@ wseGUI::~wseGUI()
 {
   delete mITKFilteringThread;
   delete mITKSegmentationThread;
+  delete mSegmentation;
 
   if (mImageStack) { delete mImageStack; }
   //mVTKImageViewer->Delete();
@@ -90,7 +92,7 @@ void wseGUI::init()
   readSettings();
   mImageStack = new FloatImageStack();
   
-  setupUI();
+  this->setupUI();
 
   this->setSliceView();
 
@@ -132,6 +134,9 @@ void wseGUI::setupUI()
   // ui.vtkRenderWidget->show();
   
   ui.progressBar->hide();
+
+  // For now we only support a single segmentation at a time, so hide the list of segmentation data.
+  ui.segmentationDataGroupBox->hide();
 
   PickerCallback *mPickerCallback = new PickerCallback(this);
   mPointPicker = vtkPointPicker::New();
@@ -373,11 +378,8 @@ void wseGUI::setupUI()
   // vbox->setMargin(0);
   //  ui.colorScaleGroupBox->setLayout(vbox);
 
-
-
   mCrosshairActor = vtkActor::New();
   mSliceViewer->GetRenderer()->AddActor(mCrosshairActor);
-
 
   // set defaults for basic mode
   //ui.smoothGroupBox->setChecked(false);

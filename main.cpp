@@ -36,6 +36,6 @@ int main(int argc, char *argv[])
   //	std::cout << "library path = " << it->toStdString() << std::endl;
   //	it++;
   //   }
-
+  w.showStartMenu();
   return a.exec();
 }
