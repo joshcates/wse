@@ -34,45 +34,7 @@ void wseGUI::mITKFilteringThread_finished()
   this->on_setImageDataButton_released();
 }
   
-void wseGUI::mITKSegmentationThread_started()
-{ 
-  // Hook up to itk progress event
-  itk::wseITKCallback<wseGUI>::Pointer mycmd = itk::wseITKCallback<wseGUI>::New();
-  mycmd->setGui(this);    
-  mITKSegmentationThread->filter()->AddObserver(itk::ProgressEvent(), mycmd);
-  
-  // Show progress bar
-  ui.progressBar->setValue(0);
-  ui.progressBar->show();
-}
 
-void wseGUI::mITKSegmentationThread_finished()
-{     
-  ui.progressBar->setValue(100);
-  ui.progressBar->hide();
-  if (mITKSegmentationThread->errorFlag() == true)
-    {
-      QMessageBox::warning(this, tr("Segmentation aborted"), mITKSegmentationThread->errorString());
-      this->output("Filter operation aborted by user");
-    }  
-  this->output("Segmentation operation finished");
-
-  // First clean up old segmentation
-  if (mSegmentation != NULL) { delete mSegmentation; }
-   
-  // Create the segmentation object.
-
-  ULongImage *img = new ULongImage(mITKSegmentationThread->filter()->GetOutput());
-  img->name(mITKSegmentationThread->description());
-
-  //  mSegmentation = new Segmentation(mITKSegmentationThread->filter()->GetOutput(),
-  mSegmentation = new Segmentation(img, dynamic_cast<itk::WatershedImageFilter<FloatImage::itkImageType> *>
-                                   (mITKSegmentationThread->filter().GetPointer())->GetSegmentTree());
-
-  this->updateImageDisplay();
-  this->setDualView();
-}
-    
 void wseGUI::runGaussianFiltering()
 {
   this->output(QString("Starting Gaussian filtering with sigma %1").arg(ui.smoothingSigmaInputBox->value()));
@@ -192,4 +154,59 @@ void wseGUI::runWatershedSegmentation()
   mITKSegmentationThread->start();
 }
 
+void wseGUI::mITKSegmentationThread_started()
+{ 
+  // Hook up to itk progress event
+  itk::wseITKCallback<wseGUI>::Pointer mycmd = itk::wseITKCallback<wseGUI>::New();
+  mycmd->setGui(this);    
+  mITKSegmentationThread->filter()->AddObserver(itk::ProgressEvent(), mycmd);
+  
+  // Show progress bar
+  ui.progressBar->setValue(0);
+  ui.progressBar->show();
+}
+  
+void wseGUI::mITKSegmentationThread_finished()
+{ 
+  // First rerun the filter to a zero level so that we get the base
+  // transform on the WatershedImageFilter output.  This is a bit of a
+  // hack, but won't introduce much overhead, since it only causes a
+  // relabeling of the image (the transform and merge tree will not be
+  // recomputed because level 0.0 is lower than the original level).
+  // Note that the non-hack alternative to this step would be to write
+  // another version of WatershedImageFilter that doesn't relabel its
+  // output image.
+  dynamic_cast<itk::WatershedImageFilter<FloatImage::itkImageType> *>
+    (mITKSegmentationThread->filter().GetPointer())->SetLevel(0.0);
+  mITKSegmentationThread->filter()->UpdateLargestPossibleRegion();
+  
+  // Now wrap up...
+  ui.progressBar->setValue(100);
+  ui.progressBar->hide();
+  if (mITKSegmentationThread->errorFlag() == true)
+    {
+      QMessageBox::warning(this, tr("Segmentation aborted"), mITKSegmentationThread->errorString());
+      this->output("Filter operation aborted by user");
+    }  
+  this->output("Segmentation operation finished");
+  
+  // First clean up old segmentation
+  if (mSegmentation != NULL) { delete mSegmentation; }
+  
+  // Create the segmentation object.
+  
+  ULongImage *img = new ULongImage(mITKSegmentationThread->filter()->GetOutput());
+  img->name(mITKSegmentationThread->description());
+  
+  //  mSegmentation = new Segmentation(mITKSegmentationThread->filter()->GetOutput(),
+  mSegmentation = new Segmentation(img, dynamic_cast<itk::WatershedImageFilter<FloatImage::itkImageType> *>
+                                   (mITKSegmentationThread->filter().GetPointer())->GetSegmentTree());
+  
+  this->setDualView();
+  ui.floodLevelA->setEnabled(true);
+  ui.floodLevelB->setEnabled(true);
+  
+  this->updateImageDisplay();
+}
+  
 } //end namespace wse

@@ -13,14 +13,9 @@ Segmentation::Segmentation(ULongImage *img, SegmentTreeType *tree)
   mLUTManager->SetRepaintHighlights(1);
   mLUTManager->Initialize();
   mLUTManager->LoadTree(tree);
-  mLUTManager->SetNumberOfLabels(mWatershedTransform->computeMaximumImageValue());
+  mLUTManager->SetNumberOfLabels(mWatershedTransform->computeMaximumImageValue()+1);
+  mLUTManager->PassAlphaToOutputOff();
   mLUTManager->GenerateColorTable();
-  
-  // Set up the color mapping
-  // mImageMapToRGBA = vtkImageMapToColors::New();
-  // mImageMapToRGBA->SetOutputFormatToRGBA();
-  // mImageMapToRGBA->SetInputConnection(img->vtkImporter()->GetOutputPort());
-  // mImageMapToRGBA->SetLookupTable(mLUTManager->GetLookupTable());
 
 }
 

@@ -214,8 +214,8 @@ public:
   //VTK_LEGACY(void SetZSlice(int));
   void SetZSlice(int);
 
-  void SetImageLookupTable(vtkLookupTable *l)
-  {    mImageLookupTable  = l;  }
+  /** */
+  void SetImageLookupTable(vtkLookupTable *l);
 
   void SetShowMask(bool);
   void SetShowThreshold(bool);

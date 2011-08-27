@@ -19,7 +19,6 @@
 #include "vtkRenderWindow.h"
 #include "vtkRenderWindowInteractor.h"
 #include "vtkRenderer.h"
-#include "vtkContourFilter.h"
 #include "vtkPolyDataMapper.h"
 #include "vtkActor.h"
 #include "vtkActor2D.h"
@@ -27,30 +26,16 @@
 #include "vtkProperty2D.h"
 #include "vtkImageData.h"
 #include "vtkImageImport.h"
-#include "vtkImageStencilData.h"
-#include "vtkImageToImageStencil.h"
 #include "vtkImageMapper.h"
-#include "vtkImageToStructuredPoints.h"
 #include "vtkLookupTable.h"
-#include "vtkPolyDataNormals.h"
 #include "vtkMarchingCubes.h"
 #include "vtkPointPicker.h"
-#include "vtkImageAccumulate.h"
-#include "vtkImageExtractComponents.h"
 #include "vtkImageBlend.h"
 #include "vtkMarchingCubes.h"
-#include "vtkPolyDataNormals.h"
-#include "vtkImageGradientMagnitude.h"
 #include "vtkFloatArray.h"
 #include "vtkPointData.h"
-#include "vtkSmoothPolyDataFilter.h"
-#include "vtkImageGaussianSmooth.h"
-#include "vtkImageActor.h"
-#include "vtkImageMapToWindowLevelColors.h"
 #include "vtkPointPicker.h"
 #include "vtkCellArray.h"
-#include "vtkHedgeHog.h"
-#include "vtkPlane.h"
 #include "vtkSmartPointer.h"
 
 // ITK includes
@@ -93,7 +78,8 @@ namespace wse {
 
 class InteractorCallback;
 
-/** This is the wseApplication class to override notify() and loadStyleSheet(). */
+/** This is the wseApplication class to override notify() and
+    loadStyleSheet(). */
 class wseApplication : public QApplication
 {
 public:
@@ -131,22 +117,37 @@ class wseGUI : public QMainWindow
   Q_OBJECT
   
 public:
+  /** The type of itk::Image that we are working with. */
   typedef FloatImage::itkImageType itkImageType;
 
   wseGUI(QWidget *parent = 0, Qt::WFlags flags = 0);
   ~wseGUI();
   
+  /**  */
   void closeEvent(QCloseEvent *event);
   
+  /** Updates and re-renders all of the viewer windows. */
   void updateImageDisplay();
+
+  /** Add an image to the image stack from a file.  The argument is
+      the filename.  Returns true on success and false otherwise. */
   bool addImageFromFile(QString fname);
+
+  /** Add an image to the image stack from a FloatImage pointer.
+      Responsibility for freeing the image data is passed to this
+      class.*/
   bool addImageFromData(FloatImage *img);
 
+  /** User and window layout settings for this GUI. These are saved on
+      exit and reloaded when the program is executed.*/
   static QSettings *g_settings;
 
+  /** Returns a pointer to the progress bar.  This method is require
+      for compatibility with wseITKCallback */
   QProgressBar *getProgressBar() { return ui.progressBar; }
 
-  /** */
+  /** This method can be called when an application using this GUI is
+      first started to give the user some guidance.  */
   void showStartMenu()  { this->on_addButton_released(); }
 
 public slots:
@@ -203,6 +204,12 @@ private:
   /** The main user interface class */
   Ui::WSEClass ui;
 
+  /** The URL for welcome text */
+  QUrl mWelcomeUrl;
+
+  /** The URL for help text */
+  QUrl mHelpUrl;
+
   /** Actions triggered from the main interface */
   QAction *mExportImageAction;
   QAction *mImportImageAction;
@@ -221,6 +228,7 @@ private:
   QAction *mEditSubtractAction;
   QAction *mEditMergeAction;
   QAction *mEditUndoMergeAction;
+  QAction *mHelpAction;
   
   /** The stack of image volumes in memory */
   FloatImageStack *mImageStack;
@@ -230,19 +238,14 @@ private:
       segmentation at a time.*/
   Segmentation *mSegmentation;
 
-  /** */
+  /** The class that computes and stores a histogram from an ITK image */
+  Histogram<itkImageType> *mHistogram;
 
   /** */
   int mMinHistogramBins;
 
   /** */
   int mMaxHistogramBins;
-
-  /** The class that computes and stores a histogram from an ITK image */
-  Histogram<itkImageType> *mHistogram;
-
-  /** TODO: Document */
-  bool mSmoothStepThreshold;
 
   /** TODO: Document */
   //  QwtScaleWidget mScaleWidget;
@@ -277,9 +280,6 @@ private:
       images from ui.imageListWidget. */
   std::vector<QComboBox *> mRegisteredSegmentationComboBoxes;
 
-  /** TODO: Document */
-  int mIsosurfaceImage;
-
   /** The integer number of the image in the mImageStack that is
       currently displayed.  If this number is -1, no image is being
       displayed. */
@@ -287,6 +287,9 @@ private:
 
   /** TODO: Document */
   int mImageMask;  
+
+  /** TODO: Document */
+  int mIsosurfaceImage;
 
   /** TODO: Document */
   colorSchemes mColorSchemes;
@@ -299,9 +302,6 @@ private:
 
   /** TODO: Document */
   vtkPointPicker *mPointPicker;
-
-  /** TODO: Document */
-  bool mPercentageShown;
 
   /** TODO: Document */
   bool mFullScreen;
@@ -378,9 +378,9 @@ private:
 
   /** Perform the initial setup of the user interface */
   void setupUI();
-
-  /** Perform the initial setup of the watershed filtering GUI window. */
-  void setupWatershedWindowUI();
+  void setupUIMenu();
+  void setupUIWatershedWindow();
+  void setupUIDataManager();
 
   /** Read the user interface settings from disk. */
   void readSettings();
@@ -460,6 +460,16 @@ private slots:
   void on_snapColorsToBarsCheckBox_stateChanged(int);
   void on_smoothGroupBox_toggled(bool expanded);
   void on_advancedOptionsGroupBox_toggled(bool expanded);
+
+
+  /** */
+  void on_floodLevelA_valueChanged(int) 
+  { this->floodLevelChanged(); }
+  void on_floodLevelB_valueChanged(int)
+  { this->floodLevelChanged(); }
+  void floodLevelChanged();
+
+  void displayHelp();
 
   // Won't connect automatically
   void mITKFilteringThread_finished();

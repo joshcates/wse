@@ -41,20 +41,22 @@ public:
   {    wse_->pointPick();  }
 };
   
-wseGUI::wseGUI(QWidget *parent, Qt::WFlags flags) :
+wseGUI::wseGUI(QWidget *parent, Qt::WFlags flags) : 
   QMainWindow(parent, flags),
+  mWelcomeUrl("http://www.sci.utah.edu/~cates/wse"),
+  mHelpUrl("https://github.com/joshcates/wse/wiki/Documentation"),
   mImageStack(NULL),
+  mSegmentation(NULL),
+  mHistogram(NULL),
   mMinHistogramBins(10),
   mMaxHistogramBins(1000),
-  mHistogram(NULL),
-  mSmoothStepThreshold(false)
-  //  mScaleWidget(QwtScaleDraw::BottomScale, this), mCurrentColorMap(0)
+  mCurrentColorMap(0),
+  mImageData(-1),
+  mImageMask(-1),
+  mIsosurfaceImage(-1),
+  mFullScreen(false)
 {
-
-  // Initialize some image data to NULL
-  mSegmentation    = NULL;
-  mIsosurfaceImage = NULL;
-
+  // TODO: Not used?
   mNullVTKImageData = vtkImageData::New();
 
   // Create the slice-by-slice image viewers
@@ -62,23 +64,14 @@ wseGUI::wseGUI(QWidget *parent, Qt::WFlags flags) :
   mSegmentSliceViewer = SliceViewer::New();
   mSegmentSliceViewer->SetImageMask(NULL);
 
-  // Initialize some state variables
-  mImageData = -1;
-  mImageMask = -1;
-  mIsosurfaceImage = -1;
-  mFullScreen = false;
-  mPercentageShown = false;
-
   // Create the QThread objects that execute filtering
   mITKFilteringThread  = new 
     itk::QThreadITKFilter<itk::ImageToImageFilter<FloatImage::itkImageType,FloatImage::itkImageType> >;
   mITKSegmentationThread =  new 
     itk::QThreadITKFilter<itk::ImageToImageFilter<FloatImage::itkImageType,ULongImage::itkImageType> >;
 
-
   // Create key member variables
   mImageStack = new FloatImageStack();
-
 
 #ifdef WIN32
   RedirectIOToConsole();
@@ -134,7 +127,7 @@ void wseApplication::loadStyleSheet(const char *fn)
 void wseGUI::setupUI() 
 {
   // Set up the browser
-  ui.browserWindow->load(QUrl("http://www.sci.utah.edu/~cates/wse"));
+  ui.browserWindow->load(mWelcomeUrl);
   ui.consoleDockWidget->show(); // force a raise of this widget on start
   //  ui.browserWindow->show();
   //  ui.browserDockWidget->setWindowFlags(Qt::Drawer|Qt::RightDockWidgetArea);
@@ -146,6 +139,10 @@ void wseGUI::setupUI()
   // ui.vtkRenderWidget->show();
   
   ui.progressBar->hide();
+
+  // Disable the flood level sliders to star
+  ui.floodLevelA->setEnabled(false);
+  ui.floodLevelB->setEnabled(false);
 
   // For now we only support a single segmentation at a time, so hide the list of segmentation data.
   ui.segmentationDataGroupBox->hide();
@@ -184,6 +181,111 @@ void wseGUI::setupUI()
   ui.mainToolBar->hide();
   ui.mainToolBar->setEnabled(false);
   
+  this->setupUIMenu();
+
+  this->setupUIDataManager();
+
+   // Set up the viewers 
+  ui.vtkImageWidget->SetRenderWindow(mSliceViewer->GetRenderWindow());
+  mSliceViewer->SetupInteractor(ui.vtkImageWidget->GetRenderWindow()->GetInteractor());
+
+  ui.vtkSegmentationWidget->SetRenderWindow(mSegmentSliceViewer->GetRenderWindow());
+  mSegmentSliceViewer->SetupInteractor(ui.vtkSegmentationWidget->GetRenderWindow()->GetInteractor());
+
+ // Set up the slice selection widgets and connections
+  ui.sliceSelector->setEnabled(false);
+
+  connect(ui.sliceSelector,SIGNAL(valueChanged(int)), this, SLOT(viewerChangeSlice()));
+  ui.sliceSelector->setTracking(true);
+
+  // 
+  mVTKCallback = new InteractorCallback(this);
+
+  // Set up mouse event handling 
+  this->setMouseHandling();
+
+  // Default window/level for the slice viewers and show the slice viewers
+  mSliceViewer->SetColorLevel(128);
+  mSliceViewer->SetColorWindow(256);
+  ui.vtkImageWidget->show();
+
+  mSegmentSliceViewer->SetColorLevel(256);
+  mSegmentSliceViewer->SetColorWindow(256);
+  ui.vtkSegmentationWidget->show();
+
+  // Connect the visualization selection buttons
+  connect(ui.setIsosurfaceButton, SIGNAL(released()), this, SLOT(setIsosurface()));
+  connect(ui.setImageMaskButton,  SIGNAL(released()), this, SLOT(setImageMask()));
+ 
+  // ... but disable them for now
+  ui.setIsosurfaceButton->setEnabled(false);
+  ui.setIsosurfaceButton->hide();
+  ui.setImageDataButton->setEnabled(false);
+  ui.setImageMaskButton->setEnabled(false);
+  ui.setImageMaskButton->hide();
+
+  // Initialize the color schemes
+  for (unsigned int i = 0; i < mColorSchemes.size(); i++)
+  {
+    ui.colorSchemeSelector->addItem(QString(mColorSchemes[i].name.c_str()));
+  }
+  connect(ui.colorSchemeSelector, SIGNAL(currentIndexChanged(int)), this, 
+    SLOT(colorSchemeSelectorChanged(int)));
+                    
+  // Set up histogram bins, window, and level and controls (along with connections).
+  ui.numBinsSpinner->setMinimum(mMinHistogramBins);
+  ui.numBinsSpinner->setMaximum(mMaxHistogramBins);
+  ui.numBinsSpinner->setValue(mMaxHistogramBins/4);
+  connect(ui.numBinsSpinner, SIGNAL(valueChanged(int)),this, SLOT(numBinsSpinnerChanged(int)));
+  connect(ui.histogramSlider_1, SIGNAL(thresholdChanged(double, double)),this,SLOT(histogramThresholdChanged(double,double)));
+
+  // Some conservative threshold values for WS filter
+  ui.histogramSlider_1->setLowerThreshold(.10);
+  ui.histogramSlider_1->setUpperThreshold(.40);
+
+
+
+  for (unsigned int i = 0; i < mColorMaps.size(); ++i) {
+    ui.colorMapComboBox->addItem(QString(mColorMaps[i].name.c_str()));
+  }
+  connect(ui.colorMapComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(colorMapChanged(int)));
+
+
+  // Status Bar
+  mProgressBar = new QProgressBar(this);
+  mProgressBar->setRange(0,100);
+  ui.statusBar->addPermanentWidget(mProgressBar);
+  mProgressBar->hide();
+  
+  // ???
+  this->updateColorMap(); 
+
+  //  QVBoxLayout *vbox = new QVBoxLayout;
+  // vbox->addWidget(&mScaleWidget);
+  // vbox->setSpacing(0);
+  // vbox->setMargin(0);
+  //  ui.colorScaleGroupBox->setLayout(vbox);
+
+  // Add crosshair actor to the slice viewer
+  mCrosshairActor = vtkActor::New();
+  mSliceViewer->GetRenderer()->AddActor(mCrosshairActor);
+
+  // set defaults for basic mode
+  //ui.scalarMethodComboBox->setCurrentIndex(scalarMethods.size()-1);
+  ui.smoothGroupBox->setChecked(false);
+  ui.advancedOptionsGroupBox->setChecked(false);
+  ui.showMaskOnIsoSurface->setChecked(false);
+  ui.scalarMethodComboBox->setCurrentIndex(1);
+  ui.imageInterpolationComboBox->setCurrentIndex(1);
+  ui.maskInterpolationComboBox->setCurrentIndex(1);
+  ui.subdivideMeshCheckBox->setChecked(true);
+
+  // Now initialize the Waterhshed segmentation module UI
+  this->setupUIWatershedWindow();
+}
+
+void wseGUI::setupUIMenu()
+{
   // Menubar -- Set up the actions, connect to slots, and create the menu
   // Load volume action
   mImportImageAction = new QAction(tr("Load Volume"), this);
@@ -199,11 +301,6 @@ void wseGUI::setupUI()
   // mExportColormapAction->setEnabled(false);
   // connect(mExportColormapAction, SIGNAL(triggered()), this, SLOT(exportImage()));
 
-  // Exit program action
-  QAction *exitAction = new QAction(tr("E&xit"), this);
-  exitAction->setShortcut(tr("Ctrl+Q"));
-  exitAction->setStatusTip(tr("Exit the application"));
-  connect(exitAction, SIGNAL(triggered()), qApp, SLOT(closeAllWindows()));
 
   // Full screen action
   mFullScreenAction = new QAction(tr("&Full Screen"), this);
@@ -236,7 +333,13 @@ void wseGUI::setupUI()
   prefAction->setStatusTip(tr("Set program preferences"));
   //  connect(prefAction,SIGNAL(triggered()), mPreferencesWindow,SLOT(exec()));  
 
-  // Construct file menu
+  // Exit program action
+  QAction *exitAction = new QAction(tr("E&xit"), this);
+  exitAction->setShortcut(tr("Ctrl+Q"));
+  exitAction->setStatusTip(tr("Exit the application"));
+  connect(exitAction, SIGNAL(triggered()), qApp, SLOT(closeAllWindows()));
+
+ // Construct file menu
   QMenu *fileMenu = ui.menuBar->addMenu(tr("&File"));
   fileMenu->addAction(mImportImageAction);
   fileMenu->addAction(mExportImageAction);
@@ -286,6 +389,11 @@ void wseGUI::setupUI()
   editorMenu->addAction(mEditMergeAction);
   editorMenu->addAction(mEditUndoMergeAction);
 
+  //
+  mHelpAction = new QAction(tr("Help"),this);
+  connect(mHelpAction, SIGNAL(triggered()), this, SLOT(displayHelp()));
+  QMenu *helpMenu = ui.menuBar->addMenu(tr("&Help"));
+  helpMenu->addAction(mHelpAction);
 
   //  QSignalMapper *mapper = new QSignalMapper(this);
 
@@ -303,7 +411,11 @@ void wseGUI::setupUI()
  
   ui.menuBar->setEnabled(true);
 
-  // Set up the Image List widget and connections-- this is the list
+}
+
+void wseGUI::setupUIDataManager()
+{
+ // Set up the Image List widget and connections-- this is the list
   // of loaded image volumes in the Data window
   ui.deleteButton->setEnabled(false);
   //  ui.imageListWidget->setSelectionMode(QAbstractItemView::ExtendedSelection);
@@ -315,111 +427,28 @@ void wseGUI::setupUI()
   ui.imageListWidget->setStatusTip(tr("Select the '+' icon or drag and drop images"));
 
   connect(ui.deleteButton, SIGNAL(released()), this, SLOT(importDelete()));
-  connect(ui.sliceSelector,SIGNAL(valueChanged(int)), this, SLOT(viewerChangeSlice()));
-  ui.sliceSelector->setTracking(true);
 
   connect(ui.imageListWidget, SIGNAL(itemDoubleClicked(QListWidgetItem*)), this, 
           SLOT(on_setImageDataButton_released()));
-  
-  // Set up the slice selection widgets and connections
-  ui.sliceSelector->setEnabled(false);
-  
+    
   connect(ui.imageListWidget, SIGNAL(imageDropped(QString)),
           this, SLOT(imageDropped(QString)));
-
-  ui.vtkImageWidget->SetRenderWindow(mSliceViewer->GetRenderWindow());
-  mSliceViewer->SetupInteractor(ui.vtkImageWidget->GetRenderWindow()->GetInteractor());
-
-  ui.vtkSegmentationWidget->SetRenderWindow(mSegmentSliceViewer->GetRenderWindow());
-  mSegmentSliceViewer->SetupInteractor(ui.vtkSegmentationWidget->GetRenderWindow()->GetInteractor());
-
-  // 
-  mVTKCallback = new InteractorCallback(this);
-
-  // Set up mouse event handling 
-  this->setMouseHandling();
-
-  // Default window/level for the slice viewers and show the slice viewers
-  mSliceViewer->SetColorLevel(128);
-  mSliceViewer->SetColorWindow(256);
-  ui.vtkImageWidget->show();
-
-  mSegmentSliceViewer->SetColorLevel(128);
-  mSegmentSliceViewer->SetColorWindow(256);
-  ui.vtkSegmentationWidget->show();
-
-  // Connect the visualization selection buttons
-  connect(ui.setIsosurfaceButton, SIGNAL(released()), this, SLOT(setIsosurface()));
-  connect(ui.setImageMaskButton,  SIGNAL(released()), this, SLOT(setImageMask()));
- 
-  // ... but disable them for now
-  ui.setIsosurfaceButton->setEnabled(false);
-  ui.setIsosurfaceButton->hide();
-  ui.setImageDataButton->setEnabled(false);
-  ui.setImageMaskButton->setEnabled(false);
-  ui.setImageMaskButton->hide();
-
-  // Initialize the color schemes
-  for (unsigned int i = 0; i < mColorSchemes.size(); i++)
-  {
-    ui.colorSchemeSelector->addItem(QString(mColorSchemes[i].name.c_str()));
-  }
-  connect(ui.colorSchemeSelector, SIGNAL(currentIndexChanged(int)), this, 
-    SLOT(colorSchemeSelectorChanged(int)));
-                    
-  // Set up histogram bins, window, and level and controls (along with connections).
-  ui.numBinsSpinner->setMinimum(mMinHistogramBins);
-  ui.numBinsSpinner->setMaximum(mMaxHistogramBins);
-  ui.numBinsSpinner->setValue(mMaxHistogramBins/4);
-  connect(ui.numBinsSpinner, SIGNAL(valueChanged(int)),this, SLOT(numBinsSpinnerChanged(int)));
-  connect(ui.histogramSlider_1, SIGNAL(thresholdChanged(double, double)),this,SLOT(histogramThresholdChanged(double,double)));
-
-  for (unsigned int i = 0; i < mColorMaps.size(); ++i) {
-    ui.colorMapComboBox->addItem(QString(mColorMaps[i].name.c_str()));
-  }
-  connect(ui.colorMapComboBox, SIGNAL(currentIndexChanged(int)), this, SLOT(colorMapChanged(int)));
-
-
-  // Status Bar
-  mProgressBar = new QProgressBar(this);
-  mProgressBar->setRange(0,100);
-  ui.statusBar->addPermanentWidget(mProgressBar);
-  mProgressBar->hide();
-  
-  // ???
-  this->updateColorMap(); 
-
-  //  QVBoxLayout *vbox = new QVBoxLayout;
-  // vbox->addWidget(&mScaleWidget);
-  // vbox->setSpacing(0);
-  // vbox->setMargin(0);
-  //  ui.colorScaleGroupBox->setLayout(vbox);
-
-  // Add crosshair actor to the slice viewer
-  mCrosshairActor = vtkActor::New();
-  mSliceViewer->GetRenderer()->AddActor(mCrosshairActor);
-
-  // set defaults for basic mode
-  //ui.scalarMethodComboBox->setCurrentIndex(scalarMethods.size()-1);
-  ui.smoothGroupBox->setChecked(false);
-  ui.advancedOptionsGroupBox->setChecked(false);
-  ui.showMaskOnIsoSurface->setChecked(false);
-  ui.scalarMethodComboBox->setCurrentIndex(1);
-  ui.imageInterpolationComboBox->setCurrentIndex(1);
-  ui.maskInterpolationComboBox->setCurrentIndex(1);
-  ui.subdivideMeshCheckBox->setChecked(true);
-
-  // Now initialize the Waterhshed segmentation module UI
-  this->setupWatershedWindowUI();
 }
 
-void wseGUI::setupWatershedWindowUI()
+void wseGUI::setupUIWatershedWindow()
 {
   // Denoising UI setup
   ui.curvatureRadioButton->setChecked(true);
   ui.gaussianBlurringParamsBox->hide();
 
   //
+}
+
+void wseGUI::displayHelp()
+{
+  ui.consoleDockWidget->show();
+  ui.consoleTabWidget->setCurrentIndex(1);
+  ui.browserWindow->load(mHelpUrl);
 }
 
 
@@ -442,7 +471,7 @@ void wseGUI::syncRegisteredImageComboBoxes()
 	{
 	  mRegisteredImageComboBoxes[j]->addItem(ui.imageListWidget->item(i)->text());
 	}
-      //      mRegisteredImageComboBoxes[j].setCurrentIndex(0);
+      mRegisteredImageComboBoxes[j]->setCurrentIndex(ui.imageListWidget->count()-1);
     }
 }
   
@@ -566,6 +595,10 @@ void wseGUI::readSettings()
   
   if (g_settings->value("import_path").isNull()) { g_settings->setValue("import_path", tr(".")); }
   if (g_settings->value("export_path").isNull()) { g_settings->setValue("export_path", tr(".")); }
+
+  // Restore histogram settings
+  //  if (g_settings->value("histogram_low_thresh").isNull()) {g_settings->setValue("histogram_low_thresh",
+
 }
 
 
@@ -651,15 +684,19 @@ void wseGUI::updateImageDisplay()
 	{
           if (mSegmentation->nSlices() == mImageStack->image(mImageData)->nSlices())
             {
-              mSegmentSliceViewer->SetInputConnection(mSegmentation->GetOutputPort());
               mSegmentSliceViewer->SetImageLookupTable(mSegmentation->GetLookupTable());
+
+              //NOTE: SetInputConnection should be called AFTER
+              //SetInputLookupTable.  SetInputConnection triggers a
+              //call to UpdateDisplay.
+              mSegmentSliceViewer->SetInputConnection(mSegmentation->GetOutputPort());
               this->mSegmentSliceViewer->SetZSlice(this->ui.sliceSelector->value());
 
               // TODO: Somehow rendering here causes two invalid
               // drawable errors. If I wait and let the change slice
               // events trigger re-rendering, then I do not get
               // errors.  Need to figure this out...
-              mSegmentSliceViewer->Render();
+              // mSegmentSliceViewer->Render();
             }	  
 	}
       else
@@ -1038,10 +1075,6 @@ void wseGUI::updateHistogram()
  
   updateHistogramBars();
   updateHistogramWidget();
-
-  // Some conservative threshold values for WS filter
-  ui.histogramSlider_1->setLowerThreshold(.10);
-  ui.histogramSlider_1->setUpperThreshold(.40);
 }
 
 void wseGUI::updateHistogramBars() {
@@ -1730,6 +1763,23 @@ void wseGUI::on_executeWatershedsButton_accepted()
     }
   
   this->runWatershedSegmentation();
+
+}
+
+
+void wseGUI::floodLevelChanged()
+{
+  // Get flood level from the interface
+  float lvl = static_cast<float>(ui.floodLevelA->value()) 
+    + static_cast<float>(ui.floodLevelB->value()) * 0.01;
+
+  // Update flood level display
+  ui.floodLevelLabel->setText(QString("%1").arg(lvl,0,'g',4));
+
+  // Set the segmentation 
+  //  mSegmentSliceViewermanager->ClearHighlightedValuesToSameColor();
+  mSegmentation->Merge(lvl / 100.0);
+  this->updateImageDisplay();
 }
 
 } // end namespace

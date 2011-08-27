@@ -88,6 +88,11 @@ class Segmentation
     return mLUTManager->GetLookupTable();
   }
 
+  /** Merge the segments through the lookup table to the given level */
+  void Merge(float l)
+  {    mLUTManager->Merge(l);  }
+
+
  private:
   /** A wseImage wrapper around the labeled image of the watershed
       transform, which is one of the outputs of the

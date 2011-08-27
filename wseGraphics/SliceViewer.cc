@@ -176,6 +176,32 @@ void SliceViewer::SetupInteractor(vtkRenderWindowInteractor *arg)
   }
 }
 
+
+//---------
+void SliceViewer::SetImageLookupTable(vtkLookupTable *arg)
+{
+  if (this->mImageLookupTable == arg)
+    {
+      return;
+    }
+
+   this->UnInstallPipeline();
+
+  if (this->mImageLookupTable)
+  {
+    this->mImageLookupTable->UnRegister(this);
+  }
+
+  this->mImageLookupTable = arg;
+
+  if (this->mImageLookupTable)
+  {
+    this->mImageLookupTable->Register(this);
+  }
+
+  this->InstallPipeline();
+}
+
 //----------------------------------------------------------------------------
 void SliceViewer::SetRenderWindow(vtkRenderWindow *arg)
 {
@@ -661,14 +687,12 @@ void SliceViewer::InstallPipeline()
   MaskImageMapToColors->PassAlphaToOutputOn();
   MaskImageMapToColors->SetOutputFormatToRGBA();
 
-  WindowLevel->PassAlphaToOutputOn();
-  WindowLevel->SetOutputFormatToRGBA();
-
   if (mImageLookupTable != NULL)
     {
       WindowLevel->SetLookupTable(mImageLookupTable);
     }
-
+  WindowLevel->PassAlphaToOutputOn();
+  WindowLevel->SetOutputFormatToRGBA();
 
   //ImageActor->SetInput(mImageBlend->GetOutput());
 
@@ -678,8 +702,6 @@ void SliceViewer::InstallPipeline()
     this->Renderer->AddViewProp(this->MaskImageActor);
   }
   mPipelineInstalled = true;
-
-
 }
 
 //----------------------------------------------------------------------------
@@ -820,13 +842,15 @@ vtkImageData* SliceViewer::GetInput()
 //----------------------------------------------------------------------------
 void SliceViewer::SetInputConnection(vtkAlgorithmOutput* input)
 {
-  if (mPipelineInstalled == false) {
-    InstallPipeline();
-  }
-  if (mImage == input) {
-    return;
-  }
-
+  if (mPipelineInstalled == false) 
+    {
+      InstallPipeline();
+    }
+  if (mImage == input) 
+    {
+      return;
+    }
+  
   mImage = input;
   this->UpdateDisplay(); 
   ResetWindowLevel(WindowLevel);
@@ -834,24 +858,30 @@ void SliceViewer::SetInputConnection(vtkAlgorithmOutput* input)
 }
 
 
-void SliceViewer::DisableDisplay() {
+void SliceViewer::DisableDisplay()
+{
   this->UnInstallPipeline();
 }
 
 
 void SliceViewer::UpdateDisplay()
 {
-  if (mPipelineInstalled == false) {
-    return;
-  }
+  //  std::cout << "UpdateDisplay for " << this << " with LUT " << mImageLookupTable << std::endl;
+
+  if (mPipelineInstalled == false)  {   return;  }
+
   mImageBlend->RemoveAllInputs();
-
-  if (mImage) {
-    this->WindowLevel->SetInputConnection(mImage);
-    if (mImageLookupTable != NULL) this->WindowLevel->SetLookupTable(mImageLookupTable);
-    mImageBlend->AddInputConnection(WindowLevel->GetOutputPort());
-  }
-
+  
+  if (mImage) 
+    {
+      this->WindowLevel->SetInputConnection(mImage);
+      if (mImageLookupTable != NULL) 
+        {
+          this->WindowLevel->SetLookupTable(mImageLookupTable);
+        }
+      mImageBlend->AddInputConnection(WindowLevel->GetOutputPort());
+    }
+  
   if (mMask && mShowMask) {
     this->MaskImageMapToColors->SetInputConnection(mMask);
     mImageBlend->AddInputConnection(MaskImageMapToColors->GetOutputPort());
