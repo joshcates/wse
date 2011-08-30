@@ -61,7 +61,7 @@ wseGUI::wseGUI(QWidget *parent, Qt::WFlags flags) :
 
   // Create the slice-by-slice image viewers
   mSliceViewer = SliceViewer::New();
-  mSegmentSliceViewer = SliceViewer::New();
+  mSegmentSliceViewer = SegmentationViewer::New();
   mSegmentSliceViewer->SetImageMask(NULL);
 
   // Create the QThread objects that execute filtering
@@ -151,7 +151,9 @@ void wseGUI::setupUI()
   PickerCallback *mPickerCallback = new PickerCallback(this);
   mPointPicker = vtkPointPicker::New();
   mPointPicker->AddObserver(vtkCommand::EndPickEvent, mPickerCallback);
-  ui.vtkRenderWidget->GetInteractor()->SetPicker(mPointPicker);
+  //  ui.vtkRenderWidget->GetInteractor()->SetPicker(mPointPicker);
+  ui.vtkSegmentationWidget->GetInteractor()->SetPicker(mPointPicker);
+
 
   // Construct the Toolbar
   // mImportAction = new QAction(QIcon(":/WSE/Resources/import.png"), tr("&Load Volume"), this);
@@ -191,6 +193,7 @@ void wseGUI::setupUI()
 
   ui.vtkSegmentationWidget->SetRenderWindow(mSegmentSliceViewer->GetRenderWindow());
   mSegmentSliceViewer->SetupInteractor(ui.vtkSegmentationWidget->GetRenderWindow()->GetInteractor());
+
 
  // Set up the slice selection widgets and connections
   ui.sliceSelector->setEnabled(false);
@@ -601,42 +604,6 @@ void wseGUI::readSettings()
 
 }
 
-
-//void wseGUI::visualizePage()
-//{
-  // if (mImageData != -1) {
-  //   mIsoRenderer->setImageData(mImageStack->image(mImageData));
-  // } else {
-  //   mIsoRenderer->setImageData(NULL);
-  // }
-
-  // if (mImageMask != -1) {
-  //   mIsoRenderer->setWallData(mImageStack->image(mImageMask));
-  // } else {
-  //   mIsoRenderer->setWallData(NULL);
-  // }
-
-  // if (mIsosurfaceImage != -1) {
-  //   mIsoRenderer->setEndoData(mImageStack->image(mIsosurfaceImage));
-  // } else {
-  //   mIsoRenderer->setEndoData(NULL);
-  // }
-
-  // SmoothSettings settings;
-  // settings.mEnabled = ui.smoothGroupBox->isChecked();
-  // settings.mAntiAliasing = ui.antiAliasCheckBox->isChecked();
-  // settings.mGaussianBlurring = ui.gaussianBlurCheckBox->isChecked();
-  // settings.mAntiAliasIterations = ui.antiAliasIterationsSlider->value();
-  // settings.mGaussianVariance = ui.gaussianVarianceSlider->value() / 100.0f;
-
-  // mIsoRenderer->setSmoothSettings(settings);
-  // mIsoRenderer->setMeshSubdivision(ui.subdivideMeshCheckBox->isChecked());
-
-  // mIsoRenderer->setSlice(mSliceViewer->GetFinalOutput());
-  // mIsoRenderer->createIsoSurfaces();
-  // updateColorMap(); 
-
-//}
 
 void wseGUI::viewerChangeSlice()
 {

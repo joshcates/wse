@@ -11,8 +11,6 @@
 // Custom vtk / itk classes
 #include "itkWatershedSegmentTreeWriter.h"
 #include "itkScalarToRGBPixelFunctor.h"
-//#include "vtkPatchedImageReader.h"
-//#include <vtkImageResample.h>
 #include "vtkWSLookupTableManager.h"
 #include <vtkColorTransferFunction.h>
 #include <vtkImageMapToColors.h>
@@ -33,8 +31,6 @@
 #include <vtkOpenGLPolyDataMapper.h>
 #include <vtkImageCast.h>
 #include <vtkImageMapToColors.h>
-
-//#include <itkImageToVTKImageFilter.h>
 
 namespace wse {
 

@@ -14,7 +14,6 @@ Segmentation::Segmentation(ULongImage *img, SegmentTreeType *tree)
   mLUTManager->Initialize();
   mLUTManager->LoadTree(tree);
   mLUTManager->SetNumberOfLabels(mWatershedTransform->computeMaximumImageValue()+1);
-  mLUTManager->PassAlphaToOutputOff();
   mLUTManager->GenerateColorTable();
 
 }

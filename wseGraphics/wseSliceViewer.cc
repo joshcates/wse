@@ -1,45 +1,113 @@
-#include "SliceViewer.h"
+#include "wseSliceViewer.h"
 
-/*=========================================================================
-
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: SliceViewer.cc,v $
-
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
-
-=========================================================================*/
-
-#include "vtkCamera.h"
-#include "vtkCommand.h"
-#include "vtkImageActor.h"
-#include "vtkImageData.h"
-#include "vtkImageData.h"
-#include "vtkImageMapToWindowLevelColors.h"
-#include "vtkInteractorStyleImage.h"
-#include "vtkObjectFactory.h"
-#include "vtkRenderWindow.h"
-#include "vtkRenderWindowInteractor.h"
-#include "vtkRenderer.h"
-#include "vtkImageMapper.h"
-#include "vtkLookupTable.h"
-#include "vtkAlgorithmOutput.h"
-#include "vtkImageBlend.h"
-#include "vtkImageThreshold.h"
-#include "vtkImageStencil.h"
-#include "vtkImageToImageStencil.h"
-#include "vtkImageMask.h"
-#include "vtkImageFlip.h"
+namespace wse {
 
 vtkCxxRevisionMacro(SliceViewer, "$Revision: 1.2 $");
 vtkStandardNewMacro(SliceViewer);
 
-//----------------------------------------------------------------------------
+void imageViewerCallback::Execute(vtkObject *caller,
+                                  unsigned long event,
+                                  void *vtkNotUsed(callData))
+{
+  if (this->IV->GetInput() == NULL)
+    {
+      return;
+    }
+  
+  // Reset
+  
+  if (event == vtkCommand::ResetWindowLevelEvent)
+    {
+      this->IV->GetInput()->UpdateInformation();
+      this->IV->GetInput()->SetUpdateExtent
+        (this->IV->GetInput()->GetWholeExtent());
+      this->IV->GetInput()->Update();
+      double *range = this->IV->GetInput()->GetScalarRange();
+      this->IV->SetColorWindow(range[1] - range[0]);
+      this->IV->SetColorLevel(0.5 * (range[1] + range[0]));
+      this->IV->Render();
+      return;
+    }
+  
+  // Start
+  
+  if (event == vtkCommand::StartWindowLevelEvent)
+    {
+      this->InitialWindow = this->IV->GetColorWindow();
+      this->InitialLevel = this->IV->GetColorLevel();
+      return;
+    }
+  
+  // Adjust the window level here
+  
+  vtkInteractorStyleImage *isi =
+    static_cast<vtkInteractorStyleImage *>(caller);
+  
+  int *size = this->IV->GetRenderWindow()->GetSize();
+  double window = this->InitialWindow;
+  double level = this->InitialLevel;
+  
+  // Compute normalized delta
+  
+  double dx = 4.0 *
+    (isi->GetWindowLevelCurrentPosition()[0] -
+     isi->GetWindowLevelStartPosition()[0]) / size[0];
+  double dy = 4.0 *
+    (isi->GetWindowLevelStartPosition()[1] -
+     isi->GetWindowLevelCurrentPosition()[1]) / size[1];
+  
+  // Scale by current values
+  
+  if (fabs(window) > 0.01)
+    {
+      dx = dx * window;
+    }
+  else
+    {
+      dx = dx * (window < 0 ? -0.01 : 0.01);
+    }
+  if (fabs(level) > 0.01)
+    {
+      dy = dy * level;
+    }
+  else
+    {
+      dy = dy * (level < 0 ? -0.01 : 0.01);
+    }
+  
+  // Abs so that direction does not flip
+  
+  if (window < 0.0)
+    {
+      dx = -1*dx;
+    }
+  if (level < 0.0)
+    {
+      dy = -1*dy;
+    }
+  
+  // Compute new window level
+  
+  double newWindow = dx + window;
+  double newLevel;
+  newLevel = level - dy;
+  
+  // Stay away from zero and really
+  
+  if (fabs(newWindow) < 0.01)
+    {
+      newWindow = 0.01*(newWindow < 0 ? -1 : 1);
+    }
+  if (fabs(newLevel) < 0.01)
+    {
+      newLevel = 0.01*(newLevel < 0 ? -1 : 1);
+    }
+  
+  this->IV->SetColorWindow(newWindow);
+  this->IV->SetColorLevel(newLevel);
+  this->IV->Render();
+}
+
 SliceViewer::SliceViewer()
 {
   this->mImageLookupTable = NULL;
@@ -106,7 +174,6 @@ SliceViewer::SliceViewer()
   this->InstallPipeline();
 }
 
-//----------------------------------------------------------------------------
 SliceViewer::~SliceViewer()
 {
   if (this->WindowLevel)
@@ -146,7 +213,6 @@ SliceViewer::~SliceViewer()
   }
 }
 
-//----------------------------------------------------------------------------
 void SliceViewer::SetupInteractor(vtkRenderWindowInteractor *arg)
 {
   if (this->Interactor == arg)
@@ -176,8 +242,6 @@ void SliceViewer::SetupInteractor(vtkRenderWindowInteractor *arg)
   }
 }
 
-
-//---------
 void SliceViewer::SetImageLookupTable(vtkLookupTable *arg)
 {
   if (this->mImageLookupTable == arg)
@@ -202,7 +266,6 @@ void SliceViewer::SetImageLookupTable(vtkLookupTable *arg)
   this->InstallPipeline();
 }
 
-//----------------------------------------------------------------------------
 void SliceViewer::SetRenderWindow(vtkRenderWindow *arg)
 {
   if (this->RenderWindow == arg)
@@ -227,7 +290,6 @@ void SliceViewer::SetRenderWindow(vtkRenderWindow *arg)
   this->InstallPipeline();
 }
 
-//----------------------------------------------------------------------------
 void SliceViewer::SetRenderer(vtkRenderer *arg)
 {
   if (this->Renderer == arg)
@@ -253,19 +315,19 @@ void SliceViewer::SetRenderer(vtkRenderer *arg)
   this->UpdateOrientation();
 }
 
-//----------------------------------------------------------------------------
+
 void SliceViewer::SetSize(int a,int b)
 {
   this->RenderWindow->SetSize(a, b);
 }
 
-//----------------------------------------------------------------------------
+
 int* SliceViewer::GetSize()
 {
   return this->RenderWindow->GetSize();
 }
 
-//----------------------------------------------------------------------------
+
 void SliceViewer::GetSliceRange(int &min, int &max)
 {
   vtkImageData *input = this->GetInput();
@@ -278,7 +340,7 @@ void SliceViewer::GetSliceRange(int &min, int &max)
   }
 }
 
-//----------------------------------------------------------------------------
+
 int* SliceViewer::GetSliceRange()
 {
   vtkImageData *input = this->GetInput();
@@ -290,7 +352,7 @@ int* SliceViewer::GetSliceRange()
   return NULL;
 }
 
-//----------------------------------------------------------------------------
+
 int SliceViewer::GetSliceMin()
 {
   int *range = this->GetSliceRange();
@@ -301,7 +363,7 @@ int SliceViewer::GetSliceMin()
   return 0;
 }
 
-//----------------------------------------------------------------------------
+
 int SliceViewer::GetSliceMax()
 {
   int *range = this->GetSliceRange();
@@ -312,7 +374,7 @@ int SliceViewer::GetSliceMax()
   return 0;
 }
 
-//----------------------------------------------------------------------------
+
 void SliceViewer::SetSlice(int slice)
 {
   int *range = this->GetSliceRange();
@@ -340,7 +402,7 @@ void SliceViewer::SetSlice(int slice)
   this->Render();
 }
 
-//----------------------------------------------------------------------------
+
 void SliceViewer::SetSliceOrientation(int orientation)
 {
   if (orientation < SliceViewer::SLICE_ORIENTATION_YZ ||
@@ -378,7 +440,7 @@ void SliceViewer::SetSliceOrientation(int orientation)
   this->Render();
 }
 
-//----------------------------------------------------------------------------
+
 void SliceViewer::UpdateOrientation()
 {
   // Set the camera position
@@ -409,7 +471,7 @@ void SliceViewer::UpdateOrientation()
   }
 }
 
-//----------------------------------------------------------------------------
+
 void SliceViewer::UpdateDisplayExtent()
 {
   vtkImageData *input = this->GetInput();
@@ -485,175 +547,60 @@ void SliceViewer::UpdateDisplayExtent()
   }
 }
 
-//----------------------------------------------------------------------------
+
 void SliceViewer::SetPosition(int a,int b)
 {
   this->RenderWindow->SetPosition(a, b);
 }
 
-//----------------------------------------------------------------------------
+
 int* SliceViewer::GetPosition()
 {
   return this->RenderWindow->GetPosition();
 }
 
-//----------------------------------------------------------------------------
+
 void SliceViewer::SetDisplayId(void *a)
 {
   this->RenderWindow->SetDisplayId(a);
 }
 
-//----------------------------------------------------------------------------
+
 void SliceViewer::SetWindowId(void *a)
 {
   this->RenderWindow->SetWindowId(a);
 }
 
-//----------------------------------------------------------------------------
+
 void SliceViewer::SetParentId(void *a)
 {
   this->RenderWindow->SetParentId(a);
 }
 
-//----------------------------------------------------------------------------
+
 double SliceViewer::GetColorWindow()
 {
   return this->WindowLevel->GetWindow();
 }
 
-//----------------------------------------------------------------------------
+
 double SliceViewer::GetColorLevel()
 {
   return this->WindowLevel->GetLevel();
 }
 
-//----------------------------------------------------------------------------
+
 void SliceViewer::SetColorWindow(double s)
 {
   this->WindowLevel->SetWindow(s);
 }
 
-//----------------------------------------------------------------------------
+
 void SliceViewer::SetColorLevel(double s)
 {
   this->WindowLevel->SetLevel(s);
 }
 
-//----------------------------------------------------------------------------
-class imageViewerCallback : public vtkCommand
-{
-public:
-  static imageViewerCallback *New() { return new imageViewerCallback; }
-
-  void Execute(vtkObject *caller,
-               unsigned long event,
-               void *vtkNotUsed(callData))
-  {
-    if (this->IV->GetInput() == NULL)
-    {
-      return;
-    }
-
-    // Reset
-
-    if (event == vtkCommand::ResetWindowLevelEvent)
-    {
-      this->IV->GetInput()->UpdateInformation();
-      this->IV->GetInput()->SetUpdateExtent
-          (this->IV->GetInput()->GetWholeExtent());
-      this->IV->GetInput()->Update();
-      double *range = this->IV->GetInput()->GetScalarRange();
-      this->IV->SetColorWindow(range[1] - range[0]);
-      this->IV->SetColorLevel(0.5 * (range[1] + range[0]));
-      this->IV->Render();
-      return;
-    }
-
-    // Start
-
-    if (event == vtkCommand::StartWindowLevelEvent)
-    {
-      this->InitialWindow = this->IV->GetColorWindow();
-      this->InitialLevel = this->IV->GetColorLevel();
-      return;
-    }
-
-    // Adjust the window level here
-
-    vtkInteractorStyleImage *isi =
-        static_cast<vtkInteractorStyleImage *>(caller);
-
-    int *size = this->IV->GetRenderWindow()->GetSize();
-    double window = this->InitialWindow;
-    double level = this->InitialLevel;
-
-    // Compute normalized delta
-
-    double dx = 4.0 *
-                (isi->GetWindowLevelCurrentPosition()[0] -
-                 isi->GetWindowLevelStartPosition()[0]) / size[0];
-    double dy = 4.0 *
-                (isi->GetWindowLevelStartPosition()[1] -
-                 isi->GetWindowLevelCurrentPosition()[1]) / size[1];
-
-    // Scale by current values
-
-    if (fabs(window) > 0.01)
-    {
-      dx = dx * window;
-    }
-    else
-    {
-      dx = dx * (window < 0 ? -0.01 : 0.01);
-    }
-    if (fabs(level) > 0.01)
-    {
-      dy = dy * level;
-    }
-    else
-    {
-      dy = dy * (level < 0 ? -0.01 : 0.01);
-    }
-
-    // Abs so that direction does not flip
-
-    if (window < 0.0)
-    {
-      dx = -1*dx;
-    }
-    if (level < 0.0)
-    {
-      dy = -1*dy;
-    }
-
-    // Compute new window level
-
-    double newWindow = dx + window;
-    double newLevel;
-    newLevel = level - dy;
-
-    // Stay away from zero and really
-
-    if (fabs(newWindow) < 0.01)
-    {
-      newWindow = 0.01*(newWindow < 0 ? -1 : 1);
-    }
-    if (fabs(newLevel) < 0.01)
-    {
-      newLevel = 0.01*(newLevel < 0 ? -1 : 1);
-    }
-
-    this->IV->SetColorWindow(newWindow);
-    this->IV->SetColorLevel(newLevel);
-    this->IV->Render();
-  }
-
-  SliceViewer *IV;
-  double InitialWindow;
-  double InitialLevel;
-};
-
-//----------------------------------------------------------------------------
 void SliceViewer::InstallPipeline()
 {
   if (this->RenderWindow && this->Renderer)
@@ -704,7 +651,7 @@ void SliceViewer::InstallPipeline()
   mPipelineInstalled = true;
 }
 
-//----------------------------------------------------------------------------
+
 void SliceViewer::UnInstallPipeline()
 {
   if (this->ImageActor)
@@ -742,7 +689,7 @@ void SliceViewer::UnInstallPipeline()
   mPipelineInstalled = false;
 }
 
-//----------------------------------------------------------------------------
+
 void SliceViewer::Render()
 {
   if (this->FirstRender)
@@ -807,39 +754,38 @@ void SliceViewer::Render()
   }
 }
 
-//----------------------------------------------------------------------------
+
 const char* SliceViewer::GetWindowName()
 {
   return this->RenderWindow->GetWindowName();
 }
 
-//----------------------------------------------------------------------------
+
 void SliceViewer::SetOffScreenRendering(int i)
 {
   this->RenderWindow->SetOffScreenRendering(i);
 }
 
-//----------------------------------------------------------------------------
+
 int SliceViewer::GetOffScreenRendering()
 {
   return this->RenderWindow->GetOffScreenRendering();
 }
 
-//----------------------------------------------------------------------------
+
 void SliceViewer::SetInput(vtkImageData *in)
 {
   this->WindowLevel->SetInput(in);
   this->UpdateDisplayExtent();
 }
-//----------------------------------------------------------------------------
+
+
 vtkImageData* SliceViewer::GetInput()
 {
   return vtkImageData::SafeDownCast(this->WindowLevel->GetInput());
 }
 
 
-
-//----------------------------------------------------------------------------
 void SliceViewer::SetInputConnection(vtkAlgorithmOutput* input)
 {
   if (mPipelineInstalled == false) 
@@ -857,17 +803,13 @@ void SliceViewer::SetInputConnection(vtkAlgorithmOutput* input)
   this->UpdateDisplayExtent();
 }
 
-
 void SliceViewer::DisableDisplay()
 {
   this->UnInstallPipeline();
 }
 
-
 void SliceViewer::UpdateDisplay()
 {
-  //  std::cout << "UpdateDisplay for " << this << " with LUT " << mImageLookupTable << std::endl;
-
   if (mPipelineInstalled == false)  {   return;  }
 
   mImageBlend->RemoveAllInputs();
@@ -988,7 +930,7 @@ void SliceViewer::UpdateDisplay()
   //ImageActor->SetInput(mImageFlip->GetOutput());
 }
 
-//----------------------------------------------------------------------------
+
 void SliceViewer::SetImageMask(vtkAlgorithmOutput* mask)
 {
   mMask = mask;
@@ -997,7 +939,6 @@ void SliceViewer::SetImageMask(vtkAlgorithmOutput* mask)
 }
 
 
-//----------------------------------------------------------------------------
 #ifndef VTK_LEGACY_REMOVE
 int SliceViewer::GetWholeZMin()
 {
@@ -1025,7 +966,7 @@ void SliceViewer::SetZSlice(int s)
 }
 #endif
 
-//----------------------------------------------------------------------------
+
 void SliceViewer::PrintSelf(ostream& os, vtkIndent indent)
 {
   this->Superclass::PrintSelf(os, indent);
@@ -1105,3 +1046,5 @@ void SliceViewer::SetClipThresholdToMask(bool value) {
 vtkAlgorithmOutput *SliceViewer:: GetFinalOutput() {
   return mFinalOutput;
 }
+
+} // end namespace wse

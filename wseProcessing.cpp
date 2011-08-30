@@ -202,7 +202,7 @@ void wseGUI::mITKSegmentationThread_finished()
   mSegmentation = new Segmentation(img, dynamic_cast<itk::WatershedImageFilter<FloatImage::itkImageType> *>
                                    (mITKSegmentationThread->filter().GetPointer())->GetSegmentTree());
   
-  this->setDualView();
+  this->setNormalView();
   ui.floodLevelA->setEnabled(true);
   ui.floodLevelB->setEnabled(true);
   

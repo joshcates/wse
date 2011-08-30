@@ -1,77 +1,57 @@
-#ifndef IMAGEVIEWER_H
-#define IMAGEVIEWER_H
-
-/*=========================================================================
-
-  Program:   Visualization Toolkit
-  Module:    $RCSfile: SliceViewer.h,v $
-
-  Copyright (c) Ken Martin, Will Schroeder, Bill Lorensen
-  All rights reserved.
-  See Copyright.txt or http://www.kitware.com/Copyright.htm for details.
-
-     This software is distributed WITHOUT ANY WARRANTY; without even
-     the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
-     PURPOSE.  See the above copyright notice for more information.
-
-=========================================================================*/
-// .NAME imageViewer - Display a 2D image.
-// .SECTION Description
-// imageViewer is a convenience class for displaying a 2D image.  It
-// packages up the functionality found in vtkRenderWindow, vtkRenderer,
-// vtkImageActor and vtkImageMapToWindowLevelColors into a single easy to use
-// class.  This class also creates an image interactor style
-// (vtkInteractorStyleImage) that allows zooming and panning of images, and
-// supports interactive window/level operations on the image. Note that
-// imageViewer is simply a wrapper around these classes.
-//
-// imageViewer uses the 3D rendering and texture mapping engine
-// to draw an image on a plane.  This allows for rapid rendering,
-// zooming, and panning. The image is placed in the 3D scene at a
-// depth based on the z-coordinate of the particular image slice. Each
-// call to SetSlice() changes the image data (slice) displayed AND
-// changes the depth of the displayed slice in the 3D scene. This can
-// be controlled by the AutoAdjustCameraClippingRange ivar of the
-// InteractorStyle member.
-//
-// It is possible to mix images and geometry, using the methods:
-//
-// viewer->SetInput( myImage );
-// viewer->GetRenderer()->AddActor( myActor );
-//
-// This can be used to annotate an image with a PolyData of "edges" or
-// or highlight sections of an image or display a 3D isosurface
-// with a slice from the volume, etc. Any portions of your geometry
-// that are in front of the displayed slice will be visible; any
-// portions of your geometry that are behind the displayed slice will
-// be obscured. A more general framework (with respect to viewing
-// direction) for achieving this effect is provided by the
-// vtkImagePlaneWidget .
-//
-// Note that pressing 'r' will reset the window/level and pressing
-// shift+'r' or control+'r' will reset the camera.
-//
-// .SECTION See Also
-// vtkRenderWindow vtkRenderer vtkImageActor vtkImageMapToWindowLevelColors
-
+#ifndef _wse_slice_viewer_h
+#define _wse_slice_viewer_h
 
 #include "vtkObject.h"
 
-class vtkAlgorithmOutput;
-class vtkImageActor;
-class vtkImageData;
-class vtkImageMapToWindowLevelColors;
-class vtkInteractorStyleImage;
-class vtkRenderWindow;
-class vtkRenderer;
-class vtkRenderWindowInteractor;
-class vtkImageMapToColors;
-class vtkImageBlend;
-class vtkLookupTable;
-class vtkImageThreshold;
-class vtkImageFlip;
+#include "vtkCamera.h"
+#include "vtkCommand.h"
+#include "vtkImageActor.h"
+#include "vtkImageData.h"
+#include "vtkImageData.h"
+#include "vtkImageMapToWindowLevelColors.h"
+#include "vtkInteractorStyleImage.h"
+#include "vtkObjectFactory.h"
+#include "vtkRenderWindow.h"
+#include "vtkRenderWindowInteractor.h"
+#include "vtkRenderer.h"
+#include "vtkImageMapper.h"
+#include "vtkLookupTable.h"
+#include "vtkAlgorithmOutput.h"
+#include "vtkImageBlend.h"
+#include "vtkImageThreshold.h"
+#include "vtkImageStencil.h"
+#include "vtkImageToImageStencil.h"
+#include "vtkImageMask.h"
+#include "vtkImageFlip.h"
 
-//class VTK_RENDERING_EXPORT imageViewer : public vtkObject
+namespace wse {
+
+/** SliceViewer is a class based on the vtkImageViewer class.  It
+    provides similar functionality, but is tailored for working with
+    3D floating point grayscale image displays (e.g. medical image
+    volumes).
+
+    The following VTK imageViewer documentation also applies to
+    SliceViewer:
+
+    "ImageViewer is a convenience class for displaying a 2D image.  It
+    packages up the functionality found in vtkRenderWindow,
+    vtkRenderer, vtkImageActor and vtkImageMapToWindowLevelColors into
+    a single easy to use class.  This class also creates an image
+    interactor style (vtkInteractorStyleImage) that allows zooming and
+    panning of images, and supports interactive window/level
+    operations on the image. Note that ImageViewer is simply a wrapper
+    around these classes.
+
+    ImageViewer uses the 3D rendering and texture mapping engine to
+    draw an image on a plane.  This allows for rapid rendering, zooming,
+    and panning. The image is placed in the 3D scene at a depth based on
+    the z-coordinate of the particular image slice. Each call to
+    SetSlice() changes the image data (slice) displayed AND changes the
+    depth of the displayed slice in the 3D scene. This can be controlled
+    by the AutoAdjustCameraClippingRange ivar of the InteractorStyle
+    member."
+ */
 class SliceViewer : public vtkObject
 {
 public:
@@ -79,27 +59,24 @@ public:
   vtkTypeRevisionMacro(SliceViewer,vtkObject);
   void PrintSelf(ostream& os, vtkIndent indent);
 
-  // Description:
-  // Get the name of rendering window.
+  /** Get the name of rendering window.*/
   virtual const char *GetWindowName();
 
-  // Description:
-  // Render the resulting image.
+  /** Render the resulting image. */
   virtual void Render(void);
 
-  // Description:
-  // Set/Get the input image to the viewer.
+  /** Set/Get the input image to the viewer. */
   virtual void SetInput(vtkImageData *in);
   virtual vtkImageData *GetInput();
   virtual void SetInputConnection(vtkAlgorithmOutput* input);
 
+  /** Disassemble the rendering pipeline. */
   virtual void DisableDisplay();
 
-  // set transparent image mask
+  /** set transparent image mask */
   virtual void SetImageMask(vtkAlgorithmOutput* mask);
 
-  // Description:
-  // Set/get the slice orientation
+  /** Set/get the slice orientation */
   //BTX
   enum
   {
@@ -198,19 +175,19 @@ public:
   vtkBooleanMacro(OffScreenRendering,int);
 
   // Description:
-  // @deprecated Replaced by imageViewer::GetSliceMin() as of VTK 5.0.
+  // @deprecated Replaced by sliceviewer::GetSliceMin() as of VTK 5.0.
   VTK_LEGACY(int GetWholeZMin());
 
   // Description:
-  // @deprecated Replaced by imageViewer::GetSliceMax() as of VTK 5.0.
+  // @deprecated Replaced by sliceviewer::GetSliceMax() as of VTK 5.0.
   VTK_LEGACY(int GetWholeZMax());
 
   // Description:
-  // @deprecated Replaced by imageViewer::GetSlice() as of VTK 5.0.
+  // @deprecated Replaced by sliceviewer::GetSlice() as of VTK 5.0.
   VTK_LEGACY(int GetZSlice());
 
   // Description:
-  // @deprecated Replaced by imageViewer::SetSlice() as of VTK 5.0.
+  // @deprecated Replaced by sliceviewer::SetSlice() as of VTK 5.0.
   //VTK_LEGACY(void SetZSlice(int));
   void SetZSlice(int);
 
@@ -251,30 +228,23 @@ protected:
   vtkAlgorithmOutput              *mMask;
   vtkAlgorithmOutput              *mFinalOutput;
 
+  vtkLookupTable *mMaskLUT;
+
+  bool mPipelineInstalled;
+
   int SliceOrientation;
   int FirstRender;
   int Slice;
 
-  virtual void UpdateOrientation();
-
-private:
-  void ResetWindowLevel(vtkImageMapToWindowLevelColors *windowLevel);
-  SliceViewer(const SliceViewer&);  // Not implemented.
-  void operator=(const SliceViewer&);  // Not implemented.
-  void UpdateDisplay();
-
-  float mThresholdLower;
-  float mThresholdUpper;
   bool mShowMask;
   bool mShowThreshold;
-  float mMaskOpacity;
-  float mThresholdOpacity;
-
-  vtkLookupTable *mMaskLUT;
-  vtkImageThreshold *mImageThreshold;
   bool mClipThresholdToMask;
 
-  bool mPipelineInstalled;
+  vtkImageThreshold *mImageThreshold;
+  float mThresholdLower;
+  float mThresholdUpper;
+  float mMaskOpacity;
+  float mThresholdOpacity;
 
   vtkImageBlend *mFinalBlend;
   vtkImageBlend *mStencilBlend;
@@ -285,10 +255,34 @@ private:
   vtkImageMapToColors *mThresholdImageMapToColors;
   vtkImageMapToColors *mStencilMap;
 
+  virtual void UpdateOrientation();
+
+private:
+  SliceViewer(const SliceViewer&);  // Not implemented.
+  void operator=(const SliceViewer&);  // Not implemented.
+
+  /** */
+  virtual void ResetWindowLevel(vtkImageMapToWindowLevelColors *windowLevel);
+
+  /** */
+  virtual void UpdateDisplay();
+};
+
+
+class imageViewerCallback : public vtkCommand
+{
+public:
+  static imageViewerCallback *New() { return new imageViewerCallback; }
+
+  void Execute(vtkObject *caller, unsigned long event, void *vtkNotUsed(callData));
+
+  SliceViewer *IV;
+  double InitialWindow;
+  double InitialLevel;
 };
 
 
 
 
-
-#endif // IMAGEVIEWER_H
+} // end namespace wse
+#endif // _wse_slice_viewer_h

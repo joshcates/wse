@@ -55,7 +55,8 @@
 #include "colorScheme.h"
 #include "colorMaps.h"
 #include "wseHistogram.hxx"
-#include "SliceViewer.h"
+#include "wseSliceViewer.h"
+#include "wseSegmentationViewer.h"
 //#include "IsoRenderer.h"
 #include "wseUtils.h"
 #include "wseSegmentation.h"
@@ -262,7 +263,7 @@ private:
 
   /** The slice-by-slice image viewer for the watershed segmentation
       output */
-  SliceViewer *mSegmentSliceViewer;
+  SegmentationViewer *mSegmentSliceViewer;
 
   /** TODO: Document */
   vtkImageData *mNullVTKImageData;

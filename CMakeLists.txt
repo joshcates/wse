@@ -54,7 +54,8 @@ SET( WSE_SRCS
      wseHistogramWidget.cpp
      wseSegmentation.cpp
      wseUtils.cpp
-     wseGraphics/SliceViewer.cc
+     wseGraphics/wseSliceViewer.cc
+     wseGraphics/wseSegmentationViewer.cc
 #     wseGraphics/IsoRenderer.cpp
 )
 
@@ -66,7 +67,7 @@ SET( WSE_MOC_HDRS
 
 SET ( WSE_HDRS
         wseUtils.h
-        wseGraphics/SliceViewer.h
+#        wseGraphics/SliceViewer.h
         wseGraphics/IsoRenderer.h
 )
 
