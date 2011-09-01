@@ -143,7 +143,7 @@ SliceViewer::SliceViewer()
   mStencilLUT = vtkLookupTable::New();
   mStencilMap = vtkImageMapToColors::New();
   mAlphaLUT = vtkLookupTable::New();
-  //mImageFlip = vtkImageFlip::New();
+  //  mImageFlip = vtkImageFlip::New();
 
 
   // create lookup table for mask, currently red with the const mMaskOpacity
@@ -153,7 +153,6 @@ SliceViewer::SliceViewer()
   mMaskLUT->Build();
   mMaskLUT->SetTableValue(0,0,0,0,0.0);
   mMaskLUT->SetTableValue(1,1,0,0,mMaskOpacity);
-
 
   this->mImage = NULL;
   this->mMask = NULL;
@@ -493,58 +492,63 @@ void SliceViewer::UpdateDisplayExtent()
   }
 
   // Set the image actor
-
   switch (this->SliceOrientation)
-  {
-  case SliceViewer::SLICE_ORIENTATION_XY:
-    this->ImageActor->SetDisplayExtent(
-        w_ext[0], w_ext[1], w_ext[2], w_ext[3], this->Slice, this->Slice);
-    this->MaskImageActor->SetDisplayExtent(
-        w_ext[0], w_ext[1], w_ext[2], w_ext[3], this->Slice, this->Slice);
-    break;
-
-  case SliceViewer::SLICE_ORIENTATION_XZ:
-    this->ImageActor->SetDisplayExtent(
-        w_ext[0], w_ext[1], this->Slice, this->Slice, w_ext[4], w_ext[5]);
-    this->MaskImageActor->SetDisplayExtent(
-        w_ext[0], w_ext[1], this->Slice, this->Slice, w_ext[4], w_ext[5]);
-    break;
-
-  case SliceViewer::SLICE_ORIENTATION_YZ:
-    this->ImageActor->SetDisplayExtent(
-        this->Slice, this->Slice, w_ext[2], w_ext[3], w_ext[4], w_ext[5]);
-    this->MaskImageActor->SetDisplayExtent(
-        this->Slice, this->Slice, w_ext[2], w_ext[3], w_ext[4], w_ext[5]);
-    break;
-  }
-
+    {
+    case SliceViewer::SLICE_ORIENTATION_XY:
+      //    std::cout << "Whole extent = " << w_ext[0] << ", " << w_ext[1] << "  "
+      //          << w_ext[2] << ", " << w_ext[3] << "  " << w_ext[4] << ", " << w_ext[5] << std::endl;
+      
+      this->ImageActor->SetDisplayExtent(w_ext[0], w_ext[1], 
+                                         w_ext[2], w_ext[3], 
+                                         this->Slice, this->Slice);
+      this->MaskImageActor->SetDisplayExtent(w_ext[0], w_ext[1], 
+                                             w_ext[2], w_ext[3], 
+                                             this->Slice, this->Slice);
+      break;
+      
+    case SliceViewer::SLICE_ORIENTATION_XZ:
+      this->ImageActor->SetDisplayExtent(w_ext[0], w_ext[1], 
+                                         this->Slice, this->Slice, 
+                                         w_ext[4], w_ext[5]);
+      this->MaskImageActor->SetDisplayExtent(w_ext[0], w_ext[1], 
+                                             this->Slice, this->Slice, 
+                                             w_ext[4], w_ext[5]);
+      break;
+      
+    case SliceViewer::SLICE_ORIENTATION_YZ:
+      this->ImageActor->SetDisplayExtent(this->Slice, this->Slice, 
+                                         w_ext[2], w_ext[3], w_ext[4], w_ext[5]);
+      this->MaskImageActor->SetDisplayExtent(this->Slice, this->Slice, 
+                                             w_ext[2], w_ext[3], w_ext[4], w_ext[5]);
+      break;
+    }
+  
   // Figure out the correct clipping range
-
   if (this->Renderer)
-  {
-    if (this->InteractorStyle &&
-        this->InteractorStyle->GetAutoAdjustCameraClippingRange())
     {
-      this->Renderer->ResetCameraClippingRange();
+      if (this->InteractorStyle &&
+          this->InteractorStyle->GetAutoAdjustCameraClippingRange())
+        {
+          this->Renderer->ResetCameraClippingRange();
+        }
+      else
+        {
+          vtkCamera *cam = this->Renderer->GetActiveCamera();
+          if (cam)
+            {
+              double bounds[6];
+              this->ImageActor->GetBounds(bounds);
+              double spos = bounds[this->SliceOrientation * 2];
+              double cpos = cam->GetPosition()[this->SliceOrientation];
+              double range = fabs(spos - cpos);
+              double *spacing = input->GetSpacing();
+              double avg_spacing =
+                (spacing[0] + spacing[1] + spacing[2]) / 3.0;
+              cam->SetClippingRange(
+                                    range - avg_spacing * 3.0, range + avg_spacing * 3.0);
+            }
+        }
     }
-    else
-    {
-      vtkCamera *cam = this->Renderer->GetActiveCamera();
-      if (cam)
-      {
-        double bounds[6];
-        this->ImageActor->GetBounds(bounds);
-        double spos = bounds[this->SliceOrientation * 2];
-        double cpos = cam->GetPosition()[this->SliceOrientation];
-        double range = fabs(spos - cpos);
-        double *spacing = input->GetSpacing();
-        double avg_spacing =
-            (spacing[0] + spacing[1] + spacing[2]) / 3.0;
-        cam->SetClippingRange(
-            range - avg_spacing * 3.0, range + avg_spacing * 3.0);
-      }
-    }
-  }
 }
 
 
@@ -824,110 +828,131 @@ void SliceViewer::UpdateDisplay()
       mImageBlend->AddInputConnection(WindowLevel->GetOutputPort());
     }
   
-  if (mMask && mShowMask) {
-    this->MaskImageMapToColors->SetInputConnection(mMask);
-    mImageBlend->AddInputConnection(MaskImageMapToColors->GetOutputPort());
-  }
-
-  if (mImage && mMask && mShowThreshold) {
-    // Use a vtkImageThreshold to apply the histogram threshold to the original image
-    mImageThreshold->RemoveAllInputs();
-    mImageThreshold->SetInputConnection(mImage);
-    //mImageThreshold->ThresholdByUpper(mThresholdLower);
-    mImageThreshold->ThresholdBetween(mThresholdLower, mThresholdUpper);
-    mImageThreshold->ReplaceInOn();
-    mImageThreshold->ReplaceOutOn();
-    mImageThreshold->SetInValue(0);
-    mImageThreshold->SetOutValue(1);
-    mImageThreshold->Update();
-
-    // Threshold image table sets alpha values depending on the clipping
-    mThresholdLUT->SetRange(0,1);
-    mThresholdLUT->SetNumberOfColors(2);
-    mThresholdLUT->Build();
-    if (mClipThresholdToMask) {
-      mThresholdLUT->SetTableValue(0,1,1,1,1);
-    } else {
-      mThresholdLUT->SetTableValue(0,0,1,0,1);
+  if (mMask && mShowMask) 
+    {
+      this->MaskImageMapToColors->SetInputConnection(mMask);
+      mImageBlend->AddInputConnection(MaskImageMapToColors->GetOutputPort());
     }
-    mThresholdLUT->SetTableValue(1,0,0,0,0 /*opacity*/);
+  
+  if (mImage && mMask && mShowThreshold) 
+    {
+      // Use a vtkImageThreshold to apply the histogram threshold to the original image
+      mImageThreshold->RemoveAllInputs();
+      mImageThreshold->SetInputConnection(mImage);
+      //mImageThreshold->ThresholdByUpper(mThresholdLower);
+      mImageThreshold->ThresholdBetween(mThresholdLower, mThresholdUpper);
+      mImageThreshold->ReplaceInOn();
+      mImageThreshold->ReplaceOutOn();
+      mImageThreshold->SetInValue(0);
+      mImageThreshold->SetOutValue(1);
+      mImageThreshold->Update();
+      
+      // Threshold image table sets alpha values depending on the clipping
+      mThresholdLUT->SetRange(0,1);
+      mThresholdLUT->SetNumberOfColors(2);
+      mThresholdLUT->Build();
+      if (mClipThresholdToMask) {
+        mThresholdLUT->SetTableValue(0,1,1,1,1);
+      } else {
+        mThresholdLUT->SetTableValue(0,0,1,0,1);
+      }
+      mThresholdLUT->SetTableValue(1,0,0,0,0 /*opacity*/);
+      
+      // vtkImageMapToColors applies the mThresholdLUT to the mImageThreshold
+      mThresholdImageMapToColors->RemoveAllInputs();
+      mThresholdImageMapToColors->SetLookupTable(mThresholdLUT);
+      mThresholdImageMapToColors->PassAlphaToOutputOn();
+      mThresholdImageMapToColors->SetOutputFormatToRGBA();
+      mThresholdImageMapToColors->SetInputConnection(mImageThreshold->GetOutputPort());
+      
+      // create stencil LUT for the mask
+      mStencilLUT->SetRange(0,1);
+      mStencilLUT->SetNumberOfColors(2);
+      mStencilLUT->Build();
+      mStencilLUT->SetTableValue(0,0,0,0,0);
+      mStencilLUT->SetTableValue(1,0,0,0,1);
+      
+      // vtkImageMapToColors for the mask
+      mStencilMap->RemoveAllInputs();
+      mStencilMap->SetInputConnection(mMask);
+      mStencilMap->SetLookupTable(mStencilLUT);
+      mStencilMap->PassAlphaToOutputOn();
+      mStencilMap->SetOutputFormatToRGBA();
+      
+      // a vtkImageBlend to clip the threshold image against the mask
+      mStencilBlend->RemoveAllInputs();
+      mStencilBlend->AddInputConnection(mStencilMap->GetOutputPort());
+      mStencilBlend->AddInputConnection(mThresholdImageMapToColors->GetOutputPort());
+      
+      // a vtkLookupTable to apply transparency for the clipped threshold
+      mAlphaLUT->SetRange(0,1);
+      mAlphaLUT->SetNumberOfColors(2);
+      mAlphaLUT->Build();
+      mAlphaLUT->SetTableValue(0,0,0,0,0);
+      mAlphaLUT->SetTableValue(1,0,1,0,1);
+      
+      // a vtkImageMapToColors to apply the lookuptable to the clipped threshold
+      mAlphaMap->RemoveAllInputs();
+      mAlphaMap->SetInputConnection(mStencilBlend->GetOutputPort());
+      mAlphaMap->SetLookupTable(mAlphaLUT);
+      mAlphaMap->PassAlphaToOutputOn();
+      mAlphaMap->SetOutputFormatToRGBA();
+      
+      // the final vtkImageBlend merging the original image (plus optional mask) with the threshold
+      mFinalBlend->RemoveAllInputs();
+      mFinalBlend->AddInputConnection(mImageBlend->GetOutputPort());
+      
+      if (mClipThresholdToMask) {
+        mFinalBlend->AddInputConnection(mAlphaMap->GetOutputPort());
+      } else {
+        mFinalBlend->AddInputConnection(mThresholdImageMapToColors->GetOutputPort());
+      }
+      
+      mFinalBlend->SetOpacity(1,mThresholdOpacity);
+      
+      //finalBlend->AddInputConnection(stencilBlend->GetOutputPort());
+      
+      //ImageActor->SetInput(imageMapToColors->GetOutput());
+      //ImageActor->SetInput(mStencilBlend->GetOutput());
+      
+      
+      mFinalOutput = mFinalBlend->GetOutputPort();
+      ImageActor->SetInput(mFinalBlend->GetOutput());
+      
+    } 
+  else 
+    {
 
-    // vtkImageMapToColors applies the mThresholdLUT to the mImageThreshold
-    mThresholdImageMapToColors->RemoveAllInputs();
-    mThresholdImageMapToColors->SetLookupTable(mThresholdLUT);
-    mThresholdImageMapToColors->PassAlphaToOutputOn();
-    mThresholdImageMapToColors->SetOutputFormatToRGBA();
-    mThresholdImageMapToColors->SetInputConnection(mImageThreshold->GetOutputPort());
+    if (mImage || mMask) 
+      {
+        mFinalOutput = mImageBlend->GetOutputPort();
+        ImageActor->SetInput(mImageBlend->GetOutput());
+        
+        // DEBUG
+        //  double *orig = ImageActor->GetInput()->GetOrigin();
+        //  double *spac = ImageActor->GetInput()->GetSpacing();
+        
+        //        double *orig = mImageBlend->GetOutput()->GetOrigin();
+        //        double *spac = mImageBlend->GetOutput()->GetSpacing();
 
-    // create stencil LUT for the mask
-    mStencilLUT->SetRange(0,1);
-    mStencilLUT->SetNumberOfColors(2);
-    mStencilLUT->Build();
-    mStencilLUT->SetTableValue(0,0,0,0,0);
-    mStencilLUT->SetTableValue(1,0,0,0,1);
-
-    // vtkImageMapToColors for the mask
-    mStencilMap->RemoveAllInputs();
-    mStencilMap->SetInputConnection(mMask);
-    mStencilMap->SetLookupTable(mStencilLUT);
-    mStencilMap->PassAlphaToOutputOn();
-    mStencilMap->SetOutputFormatToRGBA();
-
-    // a vtkImageBlend to clip the threshold image against the mask
-    mStencilBlend->RemoveAllInputs();
-    mStencilBlend->AddInputConnection(mStencilMap->GetOutputPort());
-    mStencilBlend->AddInputConnection(mThresholdImageMapToColors->GetOutputPort());
-
-    // a vtkLookupTable to apply transparency for the clipped threshold
-    mAlphaLUT->SetRange(0,1);
-    mAlphaLUT->SetNumberOfColors(2);
-    mAlphaLUT->Build();
-    mAlphaLUT->SetTableValue(0,0,0,0,0);
-    mAlphaLUT->SetTableValue(1,0,1,0,1);
-
-    // a vtkImageMapToColors to apply the lookuptable to the clipped threshold
-    mAlphaMap->RemoveAllInputs();
-    mAlphaMap->SetInputConnection(mStencilBlend->GetOutputPort());
-    mAlphaMap->SetLookupTable(mAlphaLUT);
-    mAlphaMap->PassAlphaToOutputOn();
-    mAlphaMap->SetOutputFormatToRGBA();
-
-    // the final vtkImageBlend merging the original image (plus optional mask) with the threshold
-    mFinalBlend->RemoveAllInputs();
-    mFinalBlend->AddInputConnection(mImageBlend->GetOutputPort());
-
-    if (mClipThresholdToMask) {
-      mFinalBlend->AddInputConnection(mAlphaMap->GetOutputPort());
-    } else {
-      mFinalBlend->AddInputConnection(mThresholdImageMapToColors->GetOutputPort());
+        //     double *orig =  vtkImageData::SafeDownCast(WindowLevel->GetInput())->GetOrigin();
+        // double *spac =  vtkImageData::SafeDownCast(WindowLevel->GetInput())->GetSpacing();
+        
+        //  std::cout << "img origin = " << orig[0] << " " << orig[1] << " " << orig[2] << std::endl;
+        /// std::cout << "img spac = " << spac[0] << " " << spac[1] << " " << spac[2] << std::endl;
+        
+        
+        // TEST
+        // mImageFlip->SetInputConnection(mFinalOutput);
+        // mImageFlip->SetFilteredAxis(0);        
+        // ImageActor->SetInput(mImageFlip->GetOutput());
+        // END TEST
+        
+      }
     }
-
-    mFinalBlend->SetOpacity(1,mThresholdOpacity);
-
-    //finalBlend->AddInputConnection(stencilBlend->GetOutputPort());
-
-    //ImageActor->SetInput(imageMapToColors->GetOutput());
-    //ImageActor->SetInput(mStencilBlend->GetOutput());
-
-
-    mFinalOutput = mFinalBlend->GetOutputPort();
-    ImageActor->SetInput(mFinalBlend->GetOutput());
-
-  } else {
-
-    if (mImage || mMask) {
-      mFinalOutput = mImageBlend->GetOutputPort();
-      ImageActor->SetInput(mImageBlend->GetOutput());
-    }
-  }
-
+  
   // disable interpolation
   ImageActor->SetInterpolate(0);
-
-  //mImageFlip->SetInputConnection(mFinalOutput);
-  //mImageFlip->SetFilteredAxis(0);
-
-  //ImageActor->SetInput(mImageFlip->GetOutput());
 }
 
 

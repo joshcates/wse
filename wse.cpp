@@ -1,10 +1,15 @@
 #include "wse.h"
+#include "vtkMatrix4x4.h"
+#include "vtkRendererCollection.h"
+
 
 namespace wse {
 
 QSettings *wseGUI::g_settings;
-
-/** */
+  
+/** A callback for changing slices in the viewer windows on mouse
+    wheel events. This callback needs to know about the wseGUI so that
+    the slice selection slider and labels can be updated.  */
 class InteractorCallback : public vtkCommand 
 {
 private:
@@ -14,7 +19,7 @@ public:
   InteractorCallback(wseGUI *wse) 
   {    wse_ = wse;  }
 
-  virtual void Execute(vtkObject *, unsigned long event, void *) 
+  virtual void Execute(vtkObject *obj, unsigned long event, void *) 
   {
     if (event == vtkCommand::MouseWheelBackwardEvent) 
       {
@@ -24,23 +29,50 @@ public:
       {
 	wse_->changeSlice(true);
       }
+    //    else if (event == vtkCommand::LeftButtonPressEvent)
+    else if (event == vtkCommand::MouseMoveEvent)
+     {
+       vtkRenderWindowInteractor *interactor = vtkRenderWindowInteractor::SafeDownCast(obj);
+       
+       int x,y;
+       interactor->GetLastEventPosition(x,y);
+       wse_->cellPickSegment((double)x, (double)y, true,
+                             // Seriously?
+                             interactor->GetRenderWindow()->GetRenderers()->GetFirstRenderer());
+     }
   }
 };
 
 /** */
-class PickerCallback : public vtkCommand 
+class PickerCallback3D : public vtkCommand 
 {
 private:
   wseGUI *wse_;
 
 public:
-  PickerCallback(wseGUI *wse) 
+  PickerCallback3D(wseGUI *wse) 
   {    wse_ = wse;  }
   
   virtual void Execute(vtkObject *caller, unsigned long eventId, void *callData) 
-  {    wse_->pointPick();  }
+  {    wse_->pointPick3D();  }
 };
+
+
+/** */
+//class PickerCallbackSegment : public vtkCommand 
+//{
+//private:
+//  wseGUI *wse_;
+//
+//public:
+//  PickerCallbackSegment(wseGUI *wse) 
+//  {    wse_ = wse;  }
+//  
+//  virtual void Execute(vtkObject *caller, unsigned long eventId, void *callData) 
+//  {    wse_->cellPickSegment();  }
+//};
   
+
 wseGUI::wseGUI(QWidget *parent, Qt::WFlags flags) : 
   QMainWindow(parent, flags),
   mWelcomeUrl("http://www.sci.utah.edu/~cates/wse"),
@@ -147,14 +179,6 @@ void wseGUI::setupUI()
   // For now we only support a single segmentation at a time, so hide the list of segmentation data.
   ui.segmentationDataGroupBox->hide();
 
-  // Create and initialize the picker objects
-  PickerCallback *mPickerCallback = new PickerCallback(this);
-  mPointPicker = vtkPointPicker::New();
-  mPointPicker->AddObserver(vtkCommand::EndPickEvent, mPickerCallback);
-  //  ui.vtkRenderWidget->GetInteractor()->SetPicker(mPointPicker);
-  ui.vtkSegmentationWidget->GetInteractor()->SetPicker(mPointPicker);
-
-
   // Construct the Toolbar
   // mImportAction = new QAction(QIcon(":/WSE/Resources/import.png"), tr("&Load Volume"), this);
   // mImportAction->setToolTip(tr("Load an image volume"));
@@ -194,7 +218,6 @@ void wseGUI::setupUI()
   ui.vtkSegmentationWidget->SetRenderWindow(mSegmentSliceViewer->GetRenderWindow());
   mSegmentSliceViewer->SetupInteractor(ui.vtkSegmentationWidget->GetRenderWindow()->GetInteractor());
 
-
  // Set up the slice selection widgets and connections
   ui.sliceSelector->setEnabled(false);
 
@@ -215,6 +238,17 @@ void wseGUI::setupUI()
   mSegmentSliceViewer->SetColorLevel(256);
   mSegmentSliceViewer->SetColorWindow(256);
   ui.vtkSegmentationWidget->show();
+
+  // Create and initialize the picker objects
+  //  PickerCallback3D *pcb = new PickerCallback3D(this);
+  mPointPicker3D = vtkPointPicker::New();
+  //  mPointPicker3D->AddObserver(vtkCommand::EndPickEvent, new PickerCallback3D(this));
+  ui.vtkRenderWidget->GetInteractor()->SetPicker(mPointPicker3D);
+
+  mCellPickerSegment = vtkPointPicker::New();
+  mCellPickerSegment->SetTolerance(0.005);
+  //  mCellPickerSegment->AddObserver(vtkCommand::EndPickEvent, new PickerCallbackSegment(this));
+  mSliceViewer->GetInteractor()->SetPicker(mCellPickerSegment);  
 
   // Connect the visualization selection buttons
   connect(ui.setIsosurfaceButton, SIGNAL(released()), this, SLOT(setIsosurface()));
@@ -1549,8 +1583,11 @@ void wseGUI::setMouseHandling()
 {
   ui.vtkImageWidget->GetRenderWindow()->GetInteractor()->RemoveObservers(vtkCommand::MouseWheelBackwardEvent);
   ui.vtkImageWidget->GetRenderWindow()->GetInteractor()->RemoveObservers(vtkCommand::MouseWheelForwardEvent);
+
   ui.vtkImageWidget->GetRenderWindow()->GetInteractor()->AddObserver(vtkCommand::MouseWheelBackwardEvent, mVTKCallback);
   ui.vtkImageWidget->GetRenderWindow()->GetInteractor()->AddObserver(vtkCommand::MouseWheelForwardEvent, mVTKCallback);
+  //  ui.vtkImageWidget->GetRenderWindow()->GetInteractor()->AddObserver(vtkCommand::LeftButtonPressEvent, mVTKCallback);
+  ui.vtkImageWidget->GetRenderWindow()->GetInteractor()->AddObserver(vtkCommand::MouseMoveEvent, mVTKCallback);
 
   ui.vtkSegmentationWidget->GetRenderWindow()->GetInteractor()->RemoveObservers(vtkCommand::MouseWheelBackwardEvent);
   ui.vtkSegmentationWidget->GetRenderWindow()->GetInteractor()->RemoveObservers(vtkCommand::MouseWheelForwardEvent);
@@ -1563,19 +1600,20 @@ void wseGUI::setMouseHandling()
   ui.vtkRenderWidget->GetRenderWindow()->GetInteractor()->AddObserver(vtkCommand::MouseWheelForwardEvent, mVTKCallback);
 }
 
-void wseGUI::pointPick()
+
+void wseGUI::pointPick3D()
 {
   double data[3];
-  mPointPicker->GetSelectionPoint(data);
+  mPointPicker3D->GetSelectionPoint(data);
 
   double pickPosition[3];
-  mPointPicker->GetPickPosition(pickPosition);
+  mPointPicker3D->GetPickPosition(pickPosition);
 
-  std::cerr << "Pick: Selection Point = (" << data[0] << ", " << data[1] << ", " << data[2] << ")\n";
-  std::cerr << "Pick: Position        = (" << pickPosition[0] << ", " << pickPosition[1] << ", " << pickPosition[2] << ")\n";
+  std::cout << "Pick: Selection Point = (" << data[0] << ", " << data[1] << ", " << data[2] << ")\n";
+  std::cout << "Pick: Position        = (" << pickPosition[0] << ", " << pickPosition[1] << ", " << pickPosition[2] << ")\n";
 
   int slice = mImageStack->image(mImageData)->getSliceForPoint(pickPosition);
-  std::cerr << "Pick: slice: " << slice << "\n";
+  std::cout << "Pick: slice: " << slice << "\n";
   ui.sliceSelector->setValue(slice);
 
   const int length = 3;
@@ -1747,6 +1785,137 @@ void wseGUI::floodLevelChanged()
   //  mSegmentSliceViewermanager->ClearHighlightedValuesToSameColor();
   mSegmentation->Merge(lvl / 100.0);
   this->updateImageDisplay();
+}
+
+void wseGUI::cellPickSegment(float x, float y, bool repick, vtkRenderer *ren)
+{
+  // Need to trigger pick event
+  if (repick == true)
+    {     mCellPickerSegment->Pick(x,y,0.0,ren);    }
+
+  double pickPosition[3];
+  mCellPickerSegment->GetPickPosition(pickPosition);
+
+  // TODO: The vtkPicker for some reason does not return the correct z
+  // coordinate for the point position (GetPickPosition).  I can't
+  // figure out why, so I'm computing it explicitly here. -- JC
+  const double *orig =  mSliceViewer->GetInput()->GetOrigin();
+  const double *spac =  mSliceViewer->GetInput()->GetSpacing();
+  pickPosition[2] = orig[2] + spac[2] * (double)(mSliceViewer->GetSlice());
+  float val = mImageStack->image(mImageData)->getLinearInterpolatedPixel(pickPosition);
+
+  // Print info to console
+  // this->output(QString("[%1 %2 %3] = %4").arg(pickPosition[0]).arg(pickPosition[1]).arg(pickPosition[2]).arg(val));
+  this->statusBar()->showMessage(QString("X: %1  Y: %2  Z: %3  Value: %4").arg(pickPosition[0]).arg(pickPosition[1]).arg(pickPosition[2]).arg(val));
+
+  // DEBUG INFO
+  // double data[3];
+  //  mCellPickerSegment->GetSelectionPoint(data);
+  //  std::cout << "Pick: Selection Point = (" << data[0] << ", " << data[1] << ", " << data[2] << ")\n";
+
+  // std::cout << "img origin = " << orig[0] << " " << orig[1] << " " << orig[2] << std::endl;
+  // std::cout << "img spac = " << spac[0] << " " << spac[1] << " " << spac[2] << std::endl;  
+  // std::cout << "zpos = " << zpos << std::endl;
+  // int x,y,z;
+  // int x[3];
+  // mCellPickerSegment->GetPointIJK(x);
+  // std::cout << "Pick: PointIJK = " << "(" << x[0] << ", " << x[1] << ", " << x[2] << ")\n"; 
+  //
+  // int i,j,k;
+  // mCellPickerSegment->GetCellIJK(i,j,k);
+  // std::cout << "Pick: CellIJK = " << "(" << i << ", " << j << ", " << k << ")\n"; 
+
+  //  double pCoords[3];
+  // mCellPickerSegment->GetPCoords(pCoords);
+  // std::cout << "Pick: Parameteric Coords = (" << pCoords[0] << ", " << pCoords[1] << ", " << pCoords[2] << ")\n";
+
+  //std::cout << "Pick: Cell Id = " <<  mCellPickerSegment->GetCellId() << std::endl;
+  //  std::cout << "Pick: Point Id = " <<  mCellPickerSegment->GetPointId() << std::endl;
+
+  // std::cout << "Prop3d size = " << mCellPickerSegment->GetProp3Ds()->GetNumberOfItems() << std::endl;
+
+
+
+  //  std::cout << "Pixel value = " << mImageStack->image(mImageData)->getLinearInterpolatedPixel(pickPosition) << std::endl;
+  // std::cout << "ITK image origin = " << mImageStack->image(mImageData)->itkImage()->GetOrigin() << std::endl;
+  // std::cout << "ITK image spacing = " << mImageStack->image(mImageData)->itkImage()->GetSpacing() << std::endl;
+
+  // double spc[3];
+  // mImageStack->image(mImageData)->vtkImporter()->GetDataSpacing(spc);
+  // std::cout << "vtkImporter->GetDataSpacing() = " << spc[0] << ", " << spc[1] << ", " << spc[2] << std::endl;
+
+  // double mpos[3];
+  // mCellPickerSegment->GetMapperPosition(mpos);
+  //std::cout << "picker->GetMapperPosition() = " << mpos[0] << ", " << mpos[1] << ", " << mpos[2] << std::endl;
+
+  // if (mCellPickerSegment->GetProp3Ds()->GetNumberOfItems() > 0)
+  //   {
+  //     std::cout << "here" << std::endl;
+  //     vtkMatrix4x4 *m = vtkMatrix4x4::New();
+  //     m = mCellPickerSegment->GetProp3Ds()->GetLastProp()->GetMatrix();
+
+  //      for (unsigned r = 0; r < 3; r++)
+  //        {
+  //          for(unsigned c = 0; c < 3; c++)
+  //            {
+  //              std::cout <<  m->GetElement(r,c) << " ";
+  //            }
+  //          std::cout << std::endl;
+  //        }
+  //   }
+
+  //  mCellPickerSegment->GetProp3Ds()->
+  
+  // int slice = mImageStack->image(mImageData)->getSliceForPoint(pickPosition);
+  // std::cout << "Pick: slice: " << slice << "\n";
+  // ui.sliceSelector->setValue(slice);
+
+  // const int length = 3;
+  // double x = pickPosition[0];
+  // double y = pickPosition[1];
+  // //double z = pickPosition[2];
+  // double z = mImageStack->image(mImageData)->getClosestSlicePoint(pickPosition);
+  // vtkSmartPointer<vtkPoints> points = vtkSmartPointer<vtkPoints>::New();
+  // points->SetNumberOfPoints(5);
+  // points->SetPoint(0, x, y, z);
+  // points->SetPoint(1, x+length, y, z);
+  // points->SetPoint(2, x, y+length, z);
+  // points->SetPoint(3, x-length, y, z);
+  // points->SetPoint(4, x, y-length, z);
+
+
+  // vtkSmartPointer<vtkCellArray> lines = vtkSmartPointer<vtkCellArray>::New();
+
+  // for (int i=1; i<5; i++) {
+  //   lines->InsertNextCell(2);
+  //   lines->InsertCellPoint(0);
+  //   lines->InsertCellPoint(i);
+  // }
+
+  // vtkSmartPointer<vtkUnsignedCharArray> colors = vtkSmartPointer<vtkUnsignedCharArray>::New();
+  // colors->SetName("Colors");
+  // colors->SetNumberOfComponents(3);
+  // colors->SetNumberOfTuples(5);
+  // for (int i = 0; i < 5 ;i++) 
+  //   {
+  //     colors->InsertTuple3(i, 255, 255, 0);
+  //   }
+  
+  // vtkSmartPointer<vtkPolyData> polyData = vtkSmartPointer<vtkPolyData>::New();
+  // polyData->SetPoints(points);
+  // polyData->SetLines(lines);
+  // polyData->GetPointData()->AddArray(colors);
+
+  // vtkSmartPointer<vtkPolyDataMapper> mapper = vtkSmartPointer<vtkPolyDataMapper>::New();
+  // mapper->SetInput(polyData);
+
+  // mapper->ScalarVisibilityOn();
+  // mapper->SetScalarModeToUsePointFieldData();
+  // mapper->SelectColorArray("Colors");
+ 
+  // mCrosshairActor->SetMapper(mapper);
+
+  // mSliceViewer->Render();
 }
 
 } // end namespace

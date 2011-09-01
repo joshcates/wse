@@ -278,7 +278,6 @@ Image<T>::getPixel(int ijk[3]) const
 template<class T>
 int Image<T>::getSliceForPoint(double point[3]) const
 {
-
   typename itkImageType::PointType p;
   p[0] = point[0];
   p[1] = point[1];
@@ -323,7 +322,7 @@ Image<T>::getLinearInterpolatedPixel(double point[3]) const
 
   if (!mITKImage->GetLargestPossibleRegion().IsInside(index)) 
     {
-    return 0.0f;
+      return 0.0f;
     }
   //mInterpolator->ConvertPointToContinuousIndex(p, index);
   return mLinearInterpolator->EvaluateAtContinuousIndex(index);

@@ -23,6 +23,7 @@
 #include "vtkImageToImageStencil.h"
 #include "vtkImageMask.h"
 #include "vtkImageFlip.h"
+#include "vtkPointPicker.h"
 
 namespace wse {
 
@@ -203,6 +204,9 @@ public:
 
   vtkAlgorithmOutput* GetFinalOutput();
 
+  vtkRenderWindowInteractor *GetInteractor()
+  {return Interactor; }
+  
 protected:
   SliceViewer();
   ~SliceViewer();
@@ -220,7 +224,7 @@ protected:
   vtkRenderWindowInteractor       *Interactor;
   vtkInteractorStyleImage         *InteractorStyle;
   vtkImageBlend                   *mImageBlend;
-  vtkImageFlip                    *mImageFlip;
+  //  vtkImageFlip                    *mImageFlip;
 
   vtkLookupTable                  *mImageLookupTable;
 

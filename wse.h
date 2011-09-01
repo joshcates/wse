@@ -34,9 +34,10 @@
 #include "vtkMarchingCubes.h"
 #include "vtkFloatArray.h"
 #include "vtkPointData.h"
-#include "vtkPointPicker.h"
 #include "vtkCellArray.h"
 #include "vtkSmartPointer.h"
+#include "vtkProp3DCollection.h"
+
 
 // ITK includes
 #include "itkImage.h"
@@ -174,7 +175,12 @@ public slots:
   void setDualView();
   void setSliceView();
   void setIsoSurfaceView();
-  void pointPick();
+
+  /** Picking callback for the 3D render window. */
+  void pointPick3D();
+
+  /** Picking callback for the 2D segment render window. */
+  void cellPickSegment(float x, float y, bool repick, vtkRenderer *ren);
 
   void changeSlice(bool direction);
 
@@ -301,8 +307,11 @@ private:
   /** TODO: Document */
   InteractorCallback *mVTKCallback;
 
-  /** TODO: Document */
-  vtkPointPicker *mPointPicker;
+  /** Picker object for the 3D Render window */
+  vtkPointPicker *mPointPicker3D;
+
+  /** Picker object for the 2D Segmentation window */
+  vtkPointPicker *mCellPickerSegment;
 
   /** TODO: Document */
   bool mFullScreen;

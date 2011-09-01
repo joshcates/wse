@@ -67,8 +67,11 @@
              <verstretch>0</verstretch>
             </sizepolicy>
            </property>
+           <property name="cursor">
+            <cursorShape>CrossCursor</cursorShape>
+           </property>
           </widget>
-          <widget class="QWidget" name="">
+          <widget class="QWidget" name="layoutWidget">
            <layout class="QHBoxLayout" name="horizontalLayout_9">
             <item>
              <widget class="QVTKWidget" name="vtkSegmentationWidget" native="true">
@@ -77,6 +80,9 @@
                 <horstretch>0</horstretch>
                 <verstretch>0</verstretch>
                </sizepolicy>
+              </property>
+              <property name="cursor">
+               <cursorShape>CrossCursor</cursorShape>
               </property>
              </widget>
             </item>
@@ -179,6 +185,9 @@
              <horstretch>0</horstretch>
              <verstretch>0</verstretch>
             </sizepolicy>
+           </property>
+           <property name="cursor">
+            <cursorShape>CrossCursor</cursorShape>
            </property>
           </widget>
          </widget>
@@ -1541,7 +1550,7 @@
               <x>0</x>
               <y>0</y>
               <width>421</width>
-              <height>229</height>
+              <height>133</height>
              </rect>
             </property>
             <attribute name="label">
@@ -1578,8 +1587,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>421</width>
-              <height>229</height>
+              <width>406</width>
+              <height>224</height>
              </rect>
             </property>
             <attribute name="label">
