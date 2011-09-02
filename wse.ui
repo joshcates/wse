@@ -60,7 +60,7 @@
           <property name="orientation">
            <enum>Qt::Horizontal</enum>
           </property>
-          <widget class="QVTKWidget" name="vtkImageWidget" native="true">
+          <widget class="QVTKWidget" name="vtkImageWidget">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
              <horstretch>0</horstretch>
@@ -74,7 +74,7 @@
           <widget class="QWidget" name="layoutWidget">
            <layout class="QHBoxLayout" name="horizontalLayout_9">
             <item>
-             <widget class="QVTKWidget" name="vtkSegmentationWidget" native="true">
+             <widget class="QVTKWidget" name="vtkSegmentationWidget">
               <property name="sizePolicy">
                <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
                 <horstretch>0</horstretch>
@@ -179,7 +179,7 @@
             </item>
            </layout>
           </widget>
-          <widget class="QVTKWidget" name="vtkRenderWidget" native="true">
+          <widget class="QVTKWidget" name="vtkRenderWidget">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
              <horstretch>0</horstretch>
@@ -371,7 +371,7 @@
     <string>Data Manager</string>
    </property>
    <attribute name="dockWidgetArea">
-    <number>1</number>
+    <number>2</number>
    </attribute>
    <widget class="QWidget" name="dockWidgetContents">
     <layout class="QVBoxLayout" name="verticalLayout_7">
@@ -1930,14 +1930,14 @@
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
   <customwidget>
-   <class>QWebView</class>
-   <extends>QWidget</extends>
-   <header>QtWebKit/QWebView</header>
-  </customwidget>
-  <customwidget>
    <class>QVTKWidget</class>
    <extends>QWidget</extends>
    <header>QVTKWidget.h</header>
+  </customwidget>
+  <customwidget>
+   <class>QWebView</class>
+   <extends>QWidget</extends>
+   <header>QtWebKit/QWebView</header>
   </customwidget>
   <customwidget>
    <class>wse::QImageList</class>

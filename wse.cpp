@@ -319,6 +319,9 @@ void wseGUI::setupUI()
 
   // Now initialize the Waterhshed segmentation module UI
   this->setupUIWatershedWindow();
+
+  // For now, hide the controls dock widget
+  ui.controlsDockWidget->hide();
 }
 
 void wseGUI::setupUIMenu()
@@ -807,17 +810,24 @@ void wseGUI::on_saveImageButton_released()
 
 void wseGUI::on_addButton_released()
 {
+  bool added = false; // did we actually add an image?
+  
   QStringList files = QFileDialog::getOpenFileNames(this, tr("Import Images"),
                                                     g_settings->value("import_path").toString(), 
                                                     tr("Volumes (*.nrrd *.dcm *.mhd *.mha)"));
   for (int i = 0; i < files.size(); i++)
   {
     QString imagePath = files.at(i);
-    if ( ! addImageFromFile(imagePath) ) { break; }
+    if ( ! addImageFromFile(imagePath) )
+      {
+      break;
+      }
+    added = true;
+
   }
 
   // Switch view to the last image loaded
-  this->on_setImageDataButton_released();
+  if (added == true) this->on_setImageDataButton_released();
 }
 
 void wseGUI::importDelete()
@@ -1789,6 +1799,8 @@ void wseGUI::floodLevelChanged()
 
 void wseGUI::cellPickSegment(float x, float y, bool repick, vtkRenderer *ren)
 {
+  if (mImageData == -1) return; // make sure image data is selected
+  
   // Need to trigger pick event
   if (repick == true)
     {     mCellPickerSegment->Pick(x,y,0.0,ren);    }
