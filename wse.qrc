@@ -15,5 +15,6 @@
         <file>Resources/lines.png</file>
         <file>Resources/iso.png</file>
         <file>Resources/splash2.png</file>
+        <file>Resources/wselogo.png</file>
     </qresource>
 </RCC>

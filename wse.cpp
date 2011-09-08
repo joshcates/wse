@@ -158,6 +158,15 @@ void wseApplication::loadStyleSheet(const char *fn)
 
 void wseGUI::setupUI() 
 {
+
+  //
+  QGraphicsScene *scene = new QGraphicsScene();
+  QPixmap map(QString::fromUtf8(":/WSE/Resources/wselogo.png"));
+  scene->addPixmap(map);
+  ui.watershedLogoArea->setScene(scene);
+  ui.watershedLogoArea->resize(map.width(),map.height());
+  ui.watershedLogoArea->show();
+  
   // Set up the browser
   ui.browserWindow->load(mWelcomeUrl);
   ui.consoleDockWidget->show(); // force a raise of this widget on start
@@ -1790,6 +1799,7 @@ void wseGUI::floodLevelChanged()
 
   // Update flood level display
   ui.floodLevelLabel->setText(QString("%1").arg(lvl,0,'g',4));
+  ui.floodLevelSpinBox->setValue(lvl);
 
   // Set the segmentation 
   //  mSegmentSliceViewermanager->ClearHighlightedValuesToSameColor();
