@@ -477,6 +477,12 @@ private slots:
   { this->floodLevelChanged(); }
   void on_floodLevelB_valueChanged(int)
   { this->floodLevelChanged(); }
+  //  void on_floodLevelSpinBox_editingFinished(double)
+  // void on_floodLevelSpinBox_valueChanged(double lvl)
+  // {
+  //  ui.floodLevelA->setValue(floor(lvl));
+  //  ui.floodLevelA->setValue(lvl - floor(lvl));
+  // }
   void floodLevelChanged();
 
   void displayHelp();

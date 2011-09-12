@@ -1790,7 +1790,6 @@ void wseGUI::on_executeWatershedsButton_accepted()
 
 }
 
-
 void wseGUI::floodLevelChanged()
 {
   // Get flood level from the interface
@@ -1804,7 +1803,8 @@ void wseGUI::floodLevelChanged()
   // Set the segmentation 
   //  mSegmentSliceViewermanager->ClearHighlightedValuesToSameColor();
   mSegmentation->Merge(lvl / 100.0);
-  this->updateImageDisplay();
+  mSegmentSliceViewer->Render();
+  //  this->updateImageDisplay();
 }
 
 void wseGUI::cellPickSegment(float x, float y, bool repick, vtkRenderer *ren)
